@@ -1,0 +1,33 @@
+{
+  "name": "flowlens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FlowLens (Bring Your Own AI) — Forge Custom UI bootstrap for Jira Cloud",
+  "license": "MIT",
+  "packageManager": "pnpm@12.21.0",
+  "engines": {
+    "node": "24.22.3",
+    "pnpm": "12.21.0"
+  },
+  "scripts": {
+    "dev": "vite --config static/app/vite.config.ts",
+    "typecheck": "tsc --noEmit && tsc --project static/app/tsconfig.json --noEmit",
+    "build": "pnpm typecheck && vite build --config static/app/vite.config.ts",
+    "lint": "forge lint",
+    "deploy": "pnpm build && forge deploy --environment development",
+    "tunnel": "forge tunnel --environment development"
+  },
+  "dependencies": {
+    "@forge/bridge": "7.3.0",
+    "@forge/resolver": "2.0.2",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/react": "18.3.31",
+    "@types/react-dom": "18.3.7",
+    "typescript": "5.9.3",
+    "vite": "7.3.8"
+  }
+}

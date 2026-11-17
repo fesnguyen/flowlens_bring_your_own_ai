@@ -1,0 +1,22 @@
+modules:
+  jira:issuePanel:
+    - key: flowlens-issue-panel
+      resource: app
+      resolver:
+        function: resolver
+      title: FlowLens
+      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+  function:
+    - key: resolver
+      handler: index.handler
+resources:
+  - key: app
+    path: static/app/dist
+    tunnel:
+      port: 5173
+app:
+  runtime:
+    name: nodejs24.x
+  # Registration is required before lint/deploy. Reuse an existing registered app
+  # ID here, or run `forge register "FlowLens"` once to have the CLI insert it.
+  # No fabricated app ID is supplied in this bootstrap.
