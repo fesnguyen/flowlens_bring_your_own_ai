@@ -12,9 +12,9 @@ React Custom UI communicates with the Forge resolver through `@forge/bridge`. Th
 | Resolver operation | Request | Response |
 |---|---|---|
 | `getIssueInspectionContext` | Current issue context | Normalized issue metadata and available fields |
-| `listIssueFlows` | Current issue context | Flow IDs, names, types, conclusion summaries, provenance |
+| `listIssueFlows` | Current issue context | IssueFlows directory entries: Flow IDs, names, types, conclusion summaries, Analysis provenance |
 | `getIssueFlow` | Stored flow ID | Full stored flow with code evidence |
-| `importIssueAnalysis` | Analysis JSON | Imported IDs/names, rename notices |
+| `importIssueAnalysis` | Analysis JSON | New Flow IDs/names, rename notices; existing flows unchanged |
 | `deleteIssueFlow` | Stored flow ID | Confirmation and updated list |
 
 Issue context should come from Forge/Jira trusted context and authorization checks; do not rely on a raw `issueKey` supplied by the frontend. The client may use the issue key for display.
@@ -36,7 +36,7 @@ Use consistent user-facing errors and avoid exposing sensitive server internals.
 ## Responsibilities
 
 - **Frontend:** copy/download, import file selection, diagram rendering, optimistic loading states.
-- **Resolver:** issue authorization, authoritative validation, name allocation, persistence, deletion, access checks.
+- **Resolver:** issue authorization, authoritative validation, name allocation, additive Flow/Analysis persistence, IssueFlows maintenance, deletion, access checks.
 - **Jira APIs:** issue fields and permitted attachment retrieval.
 - **Shared contract:** normalized issue context, flow list summaries, import result, validation errors.
 
