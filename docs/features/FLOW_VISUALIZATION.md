@@ -91,24 +91,29 @@ The source-code viewer must:
 - Display original source line numbers.
 - Support syntax highlighting when practical.
 - Show noncontiguous source segments.
-- Clearly indicate omitted line ranges.
+- Clearly indicate omitted line ranges, including a brief explanation of what the omitted code does.
+- Display real source-code comments with their original line numbers.
+- Render omitted-range explanations in a muted, distinct color that does not compete with code syntax.
 - Distinguish original code from proposed code.
 
 For example:
 
 ```python
+35  # Capture the customer's payment through the gateway.
 36  payment = await gateway.capture(
 37      customer_id=request.customer_id,
 38      amount=amount
 39  )
 
-    ... Lines 40–59 omitted ...
+    ... Lines 40–59 omitted (Create the order, record transaction details, and update payment metadata) ...
 
 60  if payment.success:
 61      order.status = "PAID"
 ```
 
-Omitted-line indicators are presentation elements, not original source-code statements.
+Omitted-line indicators and their AI-generated summaries are presentation elements, not original source-code statements. They are shown inline in a muted, distinct color; real source-code comments remain numbered source lines.
+
+Each retained line is supplied as `[lineNumber, content]` in the analysis JSON. This preserves line identity for possible future highlighting or annotations, without requiring those interactions now.
 
 The interface should make it possible to understand important conditions and operations without displaying an entire large function.
 
