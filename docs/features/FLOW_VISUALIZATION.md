@@ -69,17 +69,37 @@ Automatic layout is preferred. AI-generated JSON should not need to specify scre
 
 ## 4. Node Presentation
 
-Each source-code node should display enough information for quick identification:
+**Nodes are compact execution explanations, not merely function-name boxes.** The developer should understand most of the flow by reading the diagram, opening details only to verify evidence.
 
-- Node title.
-- File and function name.
-- Short explanation.
-- Relevant source-code evidence.
-- Potential issue indicators, when applicable.
+Use content-aware node variants:
 
-Detailed information may be displayed in an expanded node or an accompanying detail panel.
+- **Operation / call nodes:** prominent title; file and function; short explanation of what happens and why it matters; a small (roughly 3–6 line) original-code preview where available; finding count/indicator; source line range.
+- **Decision nodes:** condition prominently displayed, with clearly labeled outgoing branches (for example Yes/No, success/failure). Show a short condition snippet when available.
+- **Error / retry / async nodes:** visually communicate the transition type and its consequence without implying unverified behavior.
+- **Start / end nodes:** compact, with meaningful entry or outcome labels; artificial source code is not required.
+- **Suggested-flow nodes:** visibly marked as proposed rather than current repository behavior.
 
-The initial presentation should remain readable even for large workflows.
+Operation nodes should generally be wider than conventional flowchart boxes (initial design target approximately **300–380 CSS px**, subject to responsive constraints). Node height may grow with meaningful content. Avoid rigid equal sizing that truncates important explanations. Do not render entire functions in the graph.
+
+The initial diagram should remain readable at ordinary zoom. Full code, all findings, and evidence belong in the selected-node details area.
+
+### 4.1 Inspection-Driven Screen Layout
+
+The primary Jira issue-panel view contains:
+
+1. **Header / inspection actions:** Copy Inspection Prompt, Export Inspection Package, Import JSON.
+2. **Flow sidebar:** flat list of flows with original/suggestion distinctions and concise conclusion status; select and delete individual flows.
+3. **Main diagram canvas:** left-to-right graph, auto-layout, labeled branches, pan/zoom/fit.
+4. **Selected-node details:** original code with numbered lines and omitted summaries; node explanation, findings, recommendations, and source references.
+5. **Flow-level context:** investigation summary, repository/revision when known, conclusion, evidence, and unresolved questions.
+
+On sufficiently wide screens, the diagram and selected-node details may be visible together. On narrower Jira panels, use a responsive stacked or switchable layout rather than squeezing code into unreadable columns. Keep the graph as the main navigation surface and the code viewer as the main evidence surface.
+
+### 4.2 Interaction
+
+Selecting a flow updates the graph and conclusion. Selecting a node updates the details pane without losing diagram position. Finding indicators on nodes reveal relevant findings in details. Suggested flows remain separately selectable; optional links can navigate to their original flow. A graph with no selected node should show useful flow-level context.
+
+This is a conceptual UI contract, not a requirement to reproduce a particular mockup pixel-for-pixel.
 
 ## 5. Source-Code Viewer
 
@@ -179,6 +199,16 @@ The interface should prioritize comprehension over decorative complexity.
 Interaction details may evolve without changing the underlying analysis contract.
 
 ## 10. Large Workflow Handling
+
+Larger, richer nodes make diagrams wider. Support horizontal navigation, zoom, fit-to-view, and progressive disclosure. Keep previews concise and prevent code/finding content from overwhelming branch labels.
+
+Diagram positions are derived by the UI; analysis JSON does not need coordinates. Choose graph/layout and syntax-highlighting libraries during implementation based on representative inspection fixtures, not mockup appearance alone.
+
+### 10.1 Representative UI Test Fixture
+
+Use a realistic analysis containing a primary checkout flow with success and failure branches, a relevant retry or webhook flow, a source node with omitted code, node-level findings, a flow conclusion, and an optional proposed redesign. Treat it as **illustrative test data**, not a real code investigation.
+
+Verify that users can understand the main execution path from node cards alone, then inspect the full evidence in the details pane. Test long descriptions, multiple findings, cycles, asynchronous edges, and narrow Jira issue panels.
 
 Complex workflows may contain many nodes and branches.
 
