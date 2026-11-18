@@ -15,8 +15,11 @@ resources:
     tunnel:
       port: 5173
 app:
+  id: ari:cloud:ecosystem::app/7784456b-a4d3-421a-b066-521e01766e3e
   runtime:
     name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
   # Registration is required before lint/deploy. Reuse an existing registered app
   # ID here, or run `forge register "FlowLens"` once to have the CLI insert it.
   # No fabricated app ID is supplied in this bootstrap.
