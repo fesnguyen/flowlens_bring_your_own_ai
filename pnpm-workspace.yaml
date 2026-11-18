@@ -1,0 +1,8 @@
+# pnpm 12 uses this file for settings, even for a single package.
+engineStrict: true
+strictPeerDependencies: true
+saveExact: true
+allowBuilds:
+  esbuild: true
+  # This package's postinstall only prints an upgrade advertisement.
+  iframe-resizer: false
