@@ -11,23 +11,31 @@ User selects flowlens-analysis.json
   → parse JSON
   → resolver verifies Jira context and access
   → structural and semantic validation
-  → calculate new persistent IDs and unique names
-  → remap within-batch suggested-flow references
-  → persist safely (all accepted or none)
+  → read existing IssueFlows / names
+  → allocate new Flow IDs and an Analysis ID
+  → resolve duplicate names and remap suggested-flow references
+  → persist new Analysis + Flow records and update IssueFlows safely
   → return imported IDs, names, renames
-  → refresh sidebar and select imported flow
+  → refresh sidebar and select a newly imported Flow
 ```
 
 The client may prevalidate for immediate feedback, but the resolver must validate again. Never trust a client-side validation result.
 
+## Additive import contract
+
+**Every successful import adds independent flows to the Jira issue.** It does not merge imported nodes/edges into an existing diagram, and does not overwrite or replace a same-named flow. A future replacement feature would require a separate explicit user action; it is out of MVP scope.
+
+For example, if `Checkout Processing` exists, importing another `Checkout Processing` creates `Checkout Processing (0)`. Additional collisions receive `(1)`, `(2)`, etc. The suffix allocator must choose the next free name even when the imported file itself repeats a name.
+
+One imported file creates one `Analysis` record (investigation provenance) and one `Flow` record per imported flow; each `Flow.analysisId` points to its `Analysis`. `IssueFlows` tracks the resulting ordered flow IDs.
+
 ## Rules
 
-- Every successful import **adds** flows; never overwrite existing flows.
-- Duplicate names, including duplicates in the same file, get the next free `(0)`, `(1)` suffix.
-- Persisted IDs differ from AI-imported IDs and remain stable.
+- Persisted flow IDs differ from AI-imported IDs and remain stable.
 - Remap `basedOnFlowId` when its original target is in the same batch.
 - Reject incompatible versions and wrong Jira issue identity.
 - Existing flows remain untouched on validation/storage failure.
+- Never silently merge two flows, even when names match.
 
 ## Atomicity and concurrency
 
@@ -39,4 +47,4 @@ Show issue-level errors and precise schema paths. Example: `flows[0].nodes[2].co
 
 ## Acceptance tests
 
-Single/multiple flows, repeated file, duplicate names, same-batch duplicates, suggestion remapping, invalid references, wrong issue, oversized payload, concurrent imports, storage failure, and refresh/reload. Assert no existing data loss in every failure case.
+Single/multiple flows, repeated file, same-name import, same-batch duplicates, suggestion remapping, invalid references, wrong issue, oversized payload, concurrent imports, storage failure, and refresh/reload. Assert existing flows and their nodes/edges are unchanged after every import.
