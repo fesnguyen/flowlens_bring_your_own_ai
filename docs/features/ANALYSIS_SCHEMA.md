@@ -61,9 +61,13 @@ Structural start/end markers may omit source-code evidence when they do not repr
 
 Original-flow code snippets must preserve actual source code and line numbers.
 
-A snippet may contain multiple noncontiguous segments. Each segment records its starting line and source lines.
+A snippet may contain multiple noncontiguous segments. Each original source line is represented as a two-element tuple `[lineNumber, content]`, preserving its actual line number and exact source text, including source-code comments.
 
-FlowLens renders omitted ranges between segments automatically.
+The `code[]` array contains ordered `lines` blocks and optional `omitted` blocks. A `lines` block holds an array of `[lineNumber, content]` tuples. An `omitted` block records `startLine`, `endLine` (inclusive), and a brief AI-generated `summary` explaining what the omitted code does; the summary may describe several operations when needed.
+
+Omitted ranges must accurately cover the gaps between retained source lines, without overlapping or inventing line numbers. The summary is analysis metadata, not a source-code comment. The UI renders omitted ranges inline with muted styling.
+
+The tuple format provides stable line references for potential future highlighting and line-level annotations; those features are not part of the current contract.
 
 The AI must not fabricate source code, line numbers, or repository references.
 
@@ -169,24 +173,30 @@ They must not be represented as existing or verified implementation behavior.
           "source": {
             "file": "app/services/checkout.py",
             "symbol": "CheckoutService.process",
-            "startLine": 36,
-            "endLine": 43
+            "startLine": 35,
+            "endLine": 61
           },
           "code": [
             {
-              "startLine": 36,
               "lines": [
-                "payment = await gateway.capture(",
-                "    customer_id=request.customer_id,",
-                "    amount=amount",
-                ")"
+                [35, "# Capture the customer's payment through the gateway."],
+                [36, "payment = await gateway.capture("],
+                [37, "    customer_id=request.customer_id,"],
+                [38, "    amount=amount"],
+                [39, ")"]
               ]
             },
             {
-              "startLine": 42,
+              "omitted": {
+                "startLine": 40,
+                "endLine": 59,
+                "summary": "Create the order, record transaction details, and update payment metadata."
+              }
+            },
+            {
               "lines": [
-                "order.payment_id = payment.id",
-                "order.status = 'PAID'"
+                [60, "if payment.success:"],
+                [61, "    order.status = 'PAID'"]
               ]
             }
           ],
@@ -200,8 +210,8 @@ They must not be represented as existing or verified implementation behavior.
               "evidence": [
                 {
                   "file": "app/services/checkout.py",
-                  "startLine": 36,
-                  "endLine": 43
+                  "startLine": 35,
+                  "endLine": 61
                 }
               ],
               "suggestion": "Reserve inventory before capturing payment and define compensation for payment failures."
@@ -224,7 +234,9 @@ This is an illustrative contract example, not a finding from a real repository.
 - Flow IDs and node IDs must satisfy their respective uniqueness rules.
 - Every edge must reference valid nodes.
 - Every original source-code node must contain code evidence.
-- Source line ranges must be internally consistent.
+- Each source line tuple must contain an actual positive line number and its original text, including any existing code comments.
+- Line numbers must be ordered and nonduplicated; omitted ranges must match the gaps between retained lines.
+- Omitted-range summaries must be clearly separated from original source-code content.
 - Suggested code must be labeled as proposed.
 - Invalid data must produce understandable validation errors.
 - Importing must not silently overwrite existing flows.
