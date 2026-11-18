@@ -40,7 +40,7 @@ Finding cards show title, severity/status if supplied, explanation, source evide
 - **Loading:** issue context, flow list, or selected flow.
 - **Empty:** no flows; show Copy/Export/Import actions.
 - **Import validation error:** clear field paths and Copy Error Report action; do not save.
-- **Import success:** show imported flow count and renamed flows; select newly imported flow.
+- **Import success:** append new independent flows to the sidebar; show imported flow count and renamed flows; select a newly imported flow. Same-named flows never merge nodes/edges or replace existing diagrams.
 - **Read failure / unauthorized:** actionable message, no stale cross-issue data.
 - **Delete:** explicit confirmation for a single flow; keep others intact.
 - **Complex graph:** fit view initially; pan/zoom controls, accessible node focus, no forced graph reset when switching details.
