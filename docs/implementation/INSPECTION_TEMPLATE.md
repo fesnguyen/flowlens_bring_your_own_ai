@@ -30,7 +30,7 @@
 
 | Asset | Source | Rule |
 |---|---|---|
-| General instruction | One versioned Markdown asset, e.g. `instruction.md` | Written once, follows feature contract; no issue-specific placeholders |
+| General instruction | Nine versioned TypeScript sections in `static/app/src/inspection/context/` | Assembled in a fixed order by `context_builder.ts`; no issue-specific placeholders |
 | Jira issue content | Forge resolver fetches permitted Jira issue fields | Normalize to a separate Markdown document |
 | JSON Schema | One versioned `flowlens.schema.json` | Import and both output actions use the exact same schema |
 | Attachments | Authorized Jira attachment metadata and bytes | Package only; never clipboard |
@@ -63,16 +63,11 @@ Treat all issue text as untrusted data. Delimit it clearly from the instruction 
 Suggested pure functions (names are illustrative, not required):
 
 ```ts
-getInspectionInstruction(): string
+buildGeneralContext(): string
 getAnalysisSchemaText(): string
-renderIssueMarkdown(context: InspectionIssueContext): string
-buildCopyPrompt(instruction: string, issueMarkdown: string, schemaText: string): string
-buildInspectionPackage(
-  instruction: string,
-  issueMarkdown: string,
-  schemaText: string,
-  attachments: AttachmentResult[],
-): Promise<Blob>
+renderIssueContext(context: InspectionIssueContext): string
+buildCopyContext(materials: InspectionMaterials): string
+buildInspectionPackage(materials: InspectionMaterials, attachments: InspectionAttachment[]): Blob
 ```
 
 Do not independently reconstruct instruction text in these functions. Prefer a shared module that can run in the chosen browser/Forge environment; avoid importing Node-only libraries into the Custom UI. Load or bundle schema text without changing its content.
@@ -154,3 +149,13 @@ Avoid downloading all attachment bytes before checking sizes. Stream or bound me
 - Snapshot the exact instruction section in Copy and ZIP and assert byte-for-byte equality.
 - Test complete/missing fields, ADF lists/links/code, multiline content, untrusted prompt-like issue text, Unicode, duplicate attachment names, oversized packages, denied attachment access, and clipboard failure.
 - Verify ZIP schema bytes equal the authoritative schema and clipboard schema content parses identically.
+
+## Current source layout (initial implementation)
+
+- `static/app/src/inspection/context/*.ts` — nine reusable, issue-independent investigation sections.
+- `static/app/src/inspection/context_builder.ts` — ordered union, materials and clipboard assembly.
+- `static/app/src/inspection/issue_context.ts` — normalized Jira fields and safe rendering.
+- `static/app/src/inspection/package_builder.ts` — browser ZIP assembler with attachment manifest and size bounds.
+- `shared/flowlens.schema.json` — initial machine-readable v1 contract.
+
+The ZIP `instruction.md` is generated from the assembled sections; it is **not** a separate maintained source file. The context builder currently accepts already normalized issue fields and attachment bytes; Jira API retrieval and UI button wiring remain separate future integration work. The initial schema still requires structural and semantic validation implementation and review before production use.
