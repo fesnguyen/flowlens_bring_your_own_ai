@@ -6,12 +6,13 @@ import {
 import type { ResolverDefinitions } from '../../../src/definitions';
 import { FlowDiagram } from './FlowDiagram';
 import { NodeDetails } from './NodeDetails';
-import { conclusionLabels, type Flow } from './inspection';
+import { conclusionLabels, type Flow, type Inspection } from './inspection';
+import { parseInspection } from './inspection/import_inspection';
 import { mockInspection } from './mockInspection';
 import { useInspectionActions, type InspectionAction } from './useInspectionActions';
 
 // Sample inspection data used until real inspection results are integrated.
-const { flows, analysis, issue } = mockInspection;
+const { issue } = mockInspection;
 
 // Screen width at which the UI switches to its compact layout.
 const narrowScreen = '(max-width: 1050px)';
@@ -22,11 +23,12 @@ const actions = [
 ] as const;
 
 /** Both header layouts use the same buttons and operation state. */
-function Header({ issueKey, status, busy, run }: {
+function Header({ issueKey, status, busy, run, onImport }: {
   issueKey: string;
   status: string;
   busy?: InspectionAction;
   run: (action: InspectionAction, trigger: HTMLElement) => void;
+  onImport: () => void;
 }) {
   const actionButtons = (
     <>
@@ -46,7 +48,7 @@ function Header({ issueKey, status, busy, run }: {
           <Icon size={15} aria-hidden="true" /> {busy === id ? busyLabel : label}
         </button>
       ))}
-      <button className="header-action" type="button" disabled>
+      <button className="header-action" type="button" disabled={Boolean(busy)} onClick={onImport}>
         <Upload size={15} aria-hidden="true" /> Import JSON
       </button>
     </>
@@ -95,7 +97,7 @@ function Header({ issueKey, status, busy, run }: {
  * - Wide layout: Clickable flow list.
  * - Compact layout: Native dropdown selector.
  */
-function FlowSelector({ selected, onSelect }: { selected: Flow; onSelect: (flow: Flow) => void }) {
+function FlowSelector({ flows, selected, onSelect }: { flows: Flow[]; selected: Flow; onSelect: (flow: Flow) => void }) {
   return (
     <nav className="flow-selector" aria-label="Execution flows">
       {/* PANEL TITLE: Execution Flows */}
@@ -219,6 +221,11 @@ export default function App() {
   const [bridgeStatus, setBridgeStatus] = useState('Connecting to Jira…');
   const [resolverStatus, setResolverStatus] = useState('Connecting to the resolver…');
   const { busy, feedback, run, dismissFeedback } = useInspectionActions();
+  const [inspection, setInspection] = useState<Inspection>(mockInspection);
+  const [importFeedback, setImportFeedback] = useState<string>();
+  const [importError, setImportError] = useState(false);
+  const importInput = useRef<HTMLInputElement>(null);
+  const { flows, analysis } = inspection;
   const promptField = useRef<HTMLTextAreaElement>(null);
   const actionTrigger = useRef<HTMLElement>();
 
@@ -339,6 +346,31 @@ export default function App() {
   }
 
   /**
+   * IMPORT: Read a local AI result, validate it, then replace sample data.
+   * A failed import leaves the current inspection untouched.
+   */
+  async function importInspection(file?: File) {
+    if (!file) return;
+    setImportFeedback(undefined);
+    try {
+      if (file.size > 5 * 1024 * 1024) throw new Error('JSON file exceeds the 5 MiB limit.');
+      const next = parseInspection(await file.text(), issueKey);
+      setInspection(next);
+      setFlow(next.flows[0]);
+      setSelectedId(firstInspectableNode(next.flows[0]));
+      setDrawerOpen(false);
+      lastNodeButton.current = null;
+      setImportError(false);
+      setImportFeedback(`Imported ${next.flows.length} flows from ${next.issue.key}.`);
+    } catch (error) {
+      setImportError(true);
+      setImportFeedback(error instanceof Error ? error.message : 'Could not import the inspection JSON.');
+    } finally {
+      if (importInput.current) importInput.current.value = '';
+    }
+  }
+
+  /**
    * CLOSE INSPECTOR: Dismiss node details.
    *
    * Triggered by NodeDetails or the Escape key.
@@ -357,8 +389,15 @@ export default function App() {
         run={(action, trigger) => {
           actionTrigger.current = trigger;
           void run(action);
-        }} />
+        }}
+        onImport={() => importInput.current?.click()} />
+      <input ref={importInput} type="file" accept=".json,application/json"
+        className="sr-only" aria-label="Import FlowLens analysis JSON"
+        onChange={(event) => void importInspection(event.currentTarget.files?.[0])} />
 
+      {importFeedback && <div role="status" className="inspection-feedback">
+        <span className={importError ? 'inspection-error' : undefined}>{importFeedback}</span>
+      </div>}
       <div role="status" className={feedback || busy ? 'inspection-feedback' : 'sr-only'}>
         {feedback ? (
           <>
@@ -386,7 +425,7 @@ export default function App() {
       <div className="workspace">
 
         {/* LEFT PANEL: Select an execution flow to inspect */}
-        <FlowSelector selected={flow} onSelect={selectFlow} />
+        <FlowSelector flows={flows} selected={flow} onSelect={selectFlow} />
 
         {/* ===== CENTER PANEL: Selected flow visualization ===== */}
         <section className="flow-main" aria-labelledby="flow-title">
@@ -413,7 +452,7 @@ export default function App() {
 
           {/* FLOW GRAPH: Interactive nodes and their connections */}
           {/* Clicking a node calls selectNode and updates the inspector */}
-          <FlowDiagram flow={flow} selectedId={selectedId} onSelect={selectNode} />
+          <FlowDiagram key={`${inspection.issue.key}-${inspection.analysis.revision}-${flow.id}`} flow={flow} selectedId={selectedId} onSelect={selectNode} />
 
           {/* FLOW CONCLUSION: Summary, evidence, and remaining questions */}
           <FlowConclusion flow={flow} />
