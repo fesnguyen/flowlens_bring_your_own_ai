@@ -11,8 +11,6 @@ import { parseInspection } from './inspection/import_inspection';
 import { mockInspection } from './mockInspection';
 import { useInspectionActions, type InspectionAction } from './useInspectionActions';
 
-// Sample inspection data used until real inspection results are integrated.
-const { issue } = mockInspection;
 
 // Screen width at which the UI switches to its compact layout.
 const narrowScreen = '(max-width: 1050px)';
