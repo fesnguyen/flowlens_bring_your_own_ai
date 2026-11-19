@@ -114,9 +114,10 @@ The labels below correspond to the screen diagrams above.
 |---|---|
 | FlowLens identity | Display application name and branding |
 | Jira issue key | Show the issue currently being inspected |
-| Copy Inspection Prompt | Copy issue context and AI inspection instructions |
-| Export Inspection Package | Export inspection prompt, schema, and available attachments |
+| Copy Inspection Prompt | Copy one Markdown message combining unchanged general instruction, Jira issue context, and complete JSON Schema; no attachments |
+| Export Inspection Package | ZIP containing separate `instruction.md`, `issue.md`, `flowlens.schema.json`, manifest, and permitted attachments |
 | Import JSON | Import AI-generated execution-flow analysis |
+| Export Flows as JSON (future) | Download saved flows as a schema-compatible JSON analysis; distinct from the inspection ZIP |
 | Actions menu | Provide the same actions on narrow screens |
 
 The issue key comes from the trusted Forge/Jira context when available.
