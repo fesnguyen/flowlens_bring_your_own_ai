@@ -23,7 +23,7 @@ const schema = JSON.parse(schemaText) as Schema & { $defs: Record<string, Schema
 /**
  * Validate imported data using the same JSON Schema that the AI receives.
  * Only the keywords used by the versioned FlowLens schema are implemented.
- * Unknown keywords are rejected rather than silently ignored.
+ * Keep this validator aligned with the versioned schema when its keywords change.
  */
 function validate(value: unknown, rule: Schema, path: string): string | undefined {
   if (rule.$ref) {
