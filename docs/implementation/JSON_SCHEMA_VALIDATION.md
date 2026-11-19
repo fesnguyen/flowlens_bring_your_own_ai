@@ -5,7 +5,7 @@
 
 ## Contract
 
-Create a versioned `flowlens.schema.json` (candidate: JSON Schema Draft 2020-12). It is the **only authoritative structural contract** for generated analysis files, import validation, and inspection exports. Documentation explains the contract but must not become a divergent schema.
+Create a versioned `flowlens.schema.json` (candidate: JSON Schema Draft 2020-12). It is the **only authoritative structural contract** for external AI-generated analysis files, import validation, inspection Copy/Package delivery, and later saved-flow JSON export. The general inspection instruction is a separate versioned Markdown asset, not part of this schema. Documentation explains the contract but must not become a divergent schema.
 
 Top level: `version: 1`, `issue`, `analysis`, and nonempty flat `flows[]`. A flow includes `id`, `name`, `type`, `description`, `entryNodeIds`, `nodes`, `edges`, optional `conclusion` and `basedOnFlowId`. Reconcile exact required/optional fields against `ANALYSIS_SCHEMA.md` before freezing v1.
 
@@ -37,4 +37,4 @@ Parse JSON → check version/issue → JSON Schema validation → semantic valid
 
 ## Implementation and tests
 
-Use a maintained TypeScript JSON Schema validator (candidate: Ajv, with appropriate draft support). Keep the schema importable by the Forge backend and exportable verbatim to the frontend/prompt builder. Fixtures: minimal valid flow, branching, omitted code, suggested flow, malformed tuples, invalid enum, missing reference, duplicate IDs, overlapping ranges, unsupported version, wrong Jira issue.
+Use a maintained TypeScript JSON Schema validator (candidate: Ajv, with appropriate draft support). Keep one schema asset importable by the Forge backend and reusable without modification in the clipboard payload, as a separate ZIP file, and for saved-flow JSON export. Exported saved flows must validate against this schema after persistent IDs are mapped to import-compatible IDs. Fixtures: minimal valid flow, branching, omitted code, suggested flow, malformed tuples, invalid enum, missing reference, duplicate IDs, overlapping ranges, unsupported version, wrong Jira issue.
