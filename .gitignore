@@ -7,3 +7,5 @@ static/app/dist/
 *.log
 *.tsbuildinfo
 .DS_Store
+
+.test-dist/

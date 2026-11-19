@@ -8,6 +8,7 @@ import { FlowDiagram } from './FlowDiagram';
 import { NodeDetails } from './NodeDetails';
 import { conclusionLabels, type Flow } from './inspection';
 import { mockInspection } from './mockInspection';
+import { useInspectionActions, type InspectionAction } from './useInspectionActions';
 
 // Sample inspection data used until real inspection results are integrated.
 const { flows, analysis, issue } = mockInspection;
@@ -15,28 +16,41 @@ const { flows, analysis, issue } = mockInspection;
 // Screen width at which the UI switches to its compact layout.
 const narrowScreen = '(max-width: 1050px)';
 
-// Header actions are placeholders for future inspection functionality.
 const actions = [
-  { label: 'Copy Inspection Prompt', icon: Copy },
-  { label: 'Export Inspection Package', icon: ArrowDownToLine },
-  { label: 'Import JSON', icon: Upload },
-];
+  { id: 'copy', label: 'Copy Inspection Prompt', busyLabel: 'Preparing prompt…', icon: Copy },
+  { id: 'export', label: 'Export Inspection Package', busyLabel: 'Preparing package…', icon: ArrowDownToLine },
+] as const;
 
-/**
- * Header — Top navigation bar.
- *
- * Displays the FlowLens brand, current Jira issue, and inspection actions.
- * On smaller screens, actions move into a compact dropdown menu.
- *
- * The action buttons are currently disabled.
- */
-function Header({ issueKey, status }: { issueKey: string; status: string }) {
-  // Build the shared action buttons for both desktop and compact layouts.
-  const actionButtons = actions.map(({ icon: Icon, label }) => (
-    <button key={label} className="placeholder-action" type="button" disabled>
-      <Icon size={15} aria-hidden="true" /> {label}
-    </button>
-  ));
+/** Both header layouts use the same buttons and operation state. */
+function Header({ issueKey, status, busy, run }: {
+  issueKey: string;
+  status: string;
+  busy?: InspectionAction;
+  run: (action: InspectionAction, trigger: HTMLElement) => void;
+}) {
+  const actionButtons = (
+    <>
+      {actions.map(({ id, icon: Icon, label, busyLabel }) => (
+        <button key={id} className="header-action" type="button" aria-disabled={Boolean(busy)}
+          onClick={(event) => {
+            if (busy) return;
+            const button = event.currentTarget;
+            const menu = button.closest('details');
+            const trigger = menu?.querySelector('summary') ?? button;
+            if (menu) {
+              menu.open = false;
+              trigger.focus();
+            }
+            run(id, trigger);
+          }}>
+          <Icon size={15} aria-hidden="true" /> {busy === id ? busyLabel : label}
+        </button>
+      ))}
+      <button className="header-action" type="button" disabled>
+        <Upload size={15} aria-hidden="true" /> Import JSON
+      </button>
+    </>
+  );
 
   return (
     <header className="app-header">
@@ -56,7 +70,7 @@ function Header({ issueKey, status }: { issueKey: string; status: string }) {
       </div>
 
       {/* RIGHT: Inspection action buttons on wide screens */}
-      <div className="wide-actions" aria-label="Inspection actions, coming soon">
+      <div className="wide-actions" aria-label="Inspection actions">
         {actionButtons}
       </div>
 
@@ -64,7 +78,6 @@ function Header({ issueKey, status }: { issueKey: string; status: string }) {
       <details className="compact-actions">
         <summary>Actions <ChevronDown size={15} aria-hidden="true" /></summary>
         <div className="action-menu">
-          <p>Coming soon</p>
           {actionButtons}
         </div>
       </details>
@@ -205,6 +218,17 @@ export default function App() {
   const [issueKey, setIssueKey] = useState<string>();
   const [bridgeStatus, setBridgeStatus] = useState('Connecting to Jira…');
   const [resolverStatus, setResolverStatus] = useState('Connecting to the resolver…');
+  const { busy, feedback, run, dismissFeedback } = useInspectionActions();
+  const promptField = useRef<HTMLTextAreaElement>(null);
+  const actionTrigger = useRef<HTMLElement>();
+
+  // When clipboard access fails, select the full prompt so the user can copy it immediately.
+  useEffect(() => {
+    if (feedback?.prompt) {
+      promptField.current?.focus();
+      promptField.current?.select();
+    }
+  }, [feedback?.prompt]);
 
   // Currently displayed flow and selected graph node.
   const [flow, setFlow] = useState(flows[0]);
@@ -329,7 +353,31 @@ export default function App() {
   return (
     <main className="flowlens">
       {/* ===== TOP HEADER: Branding, Jira issue, and inspection actions ===== */}
-      <Header issueKey={issueKey ?? issue.key} status={bridgeStatus} />
+      <Header issueKey={issueKey ?? issue.key} status={bridgeStatus} busy={busy}
+        run={(action, trigger) => {
+          actionTrigger.current = trigger;
+          void run(action);
+        }} />
+
+      <div role="status" className={feedback || busy ? 'inspection-feedback' : 'sr-only'}>
+        {feedback ? (
+          <>
+            <span className={feedback.error ? 'inspection-error' : undefined}>{feedback.message}</span>
+            {feedback.download && <a href={feedback.download.url} download={feedback.download.filename}>Download ZIP</a>}
+          </>
+        ) : busy === 'copy' ? 'Preparing inspection prompt…'
+          : busy === 'export' ? 'Preparing inspection package…' : null}
+      </div>
+      {feedback?.prompt && (
+        <div className="inspection-prompt-fallback">
+          <label htmlFor="inspection-prompt">Inspection prompt</label>
+          <textarea id="inspection-prompt" ref={promptField} readOnly rows={5} value={feedback.prompt} />
+          <button type="button" className="header-action" onClick={() => {
+            dismissFeedback();
+            actionTrigger.current?.focus();
+          }}>Dismiss</button>
+        </div>
+      )}
 
       {/* SCREEN READER STATUS: Announce Jira and resolver connection results */}
       <span className="sr-only" aria-live="polite">{bridgeStatus} {resolverStatus}</span>

@@ -2,7 +2,7 @@
 
 **Authority:** Level 2 — Technical Architecture  
 **Parent:** `docs/PROJECT_OVERVIEW.md`  
-**Status:** Bootstrap Implemented; Product Architecture Planned
+**Status:** Bootstrap and inspection exports implemented. Flow import and persistence are planned.
 
 ## 1. Purpose
 
@@ -125,7 +125,7 @@ Shared contracts should be typed.
 
 FlowLens uses Jira issue context to identify the current issue.
 
-Issue metadata may be retrieved through supported Jira APIs.
+The resolver identifies the issue using trusted Forge context and reads Jira REST v3 as the current user.
 
 The inspection request may contain relevant fields such as:
 
@@ -133,13 +133,10 @@ The inspection request may contain relevant fields such as:
 - Description.
 - Issue type.
 - Priority and status.
-- Reporter and assignee.
-- Relevant custom fields.
+- A visible, unambiguous Acceptance Criteria custom field when the issue supplies a value.
 - Attachment metadata and content when requested and permitted.
 
-The application must request the necessary Jira permissions for implemented operations.
-
-Only required scopes should be added.
+The manifest declares the `read:jira-work` scope for the Jira REST reads.
 
 ## 8. Inspection Export
 
@@ -155,7 +152,7 @@ Attachments are excluded.
 
 Generates a downloadable package containing the inspection instructions, issue context, and accessible attachments.
 
-The implementation should consider attachment sizes, browser limitations, download behavior, and image optimization.
+A per-file and total size limit bound downloads. The package manifest records exclusions and failures. See [Inspection Template](implementation/INSPECTION_TEMPLATE.md).
 
 The package must preserve useful evidence.
 

@@ -178,6 +178,9 @@ importers:
       '@dagrejs/dagre':
         specifier: 3.1.3
         version: 3.1.3
+      '@forge/api':
+        specifier: 8.5.0
+        version: 8.5.0(typescript@5.9.3)
       '@forge/bridge':
         specifier: 7.3.0
         version: 7.3.0(@types/react@18.3.31)(react@18.3.1)(typescript@5.9.3)
@@ -206,6 +209,9 @@ importers:
       '@types/react-dom':
         specifier: 18.3.7
         version: 18.3.7(@types/react@18.3.31)
+      fflate:
+        specifier: 0.8.3
+        version: 0.8.3
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -488,6 +494,22 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@forge/api@8.5.0':
+    resolution: {integrity: sha512-xmDM/g6a/3GqyxQHhH2l9VWEhbnjqOkbI8weZ95l0se3baXR2xGlt/D6Ar8qgGBiP4TtXA72YUScM1K3b6giVg==}
+    peerDependencies:
+      typescript: '>=5.0.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@forge/auth@1.0.0':
+    resolution: {integrity: sha512-lEwaTIS9lZAMeuf9TfuP/OyhoJz1SCoIt5ZbgbgPtG3SV/KYdI2qSW6xafnONy0iAaKJo5D3VDBEbm7K1d+qog==}
+    peerDependencies:
+      typescript: '>=5.0.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   '@forge/bridge@7.3.0':
     resolution: {integrity: sha512-+m0ieeUe/ms/p0e2OLae2TLrHHf5ow3FtS0n6S6nsxNG050aORkIQPMtYsfBv1gJHeoAwrBo+BCU9lJmIw5/hg==}
     peerDependencies:
@@ -522,6 +544,14 @@ packages:
 
   '@forge/resolver@2.0.2':
     resolution: {integrity: sha512-LIAW/lS/1prKWhO3KPj9uaOSIvXL8Sv0vFHuW6yEHKRcAVF8vt7qDDVmkQwAsnx74QtRywDzN7UZuzeNKqhq0g==}
+    peerDependencies:
+      typescript: '>=5.0.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@forge/util@4.0.0':
+    resolution: {integrity: sha512-2ihfU7XzENt4CjklAwvwyzWZbwiocvy/XOzwX/7kuCVSb8fXozwuwXtMbPwrgAIgqiWhQpSFDorQm6CMmVCYAw==}
     peerDependencies:
       typescript: '>=5.0.0'
     peerDependenciesMeta:
@@ -925,6 +955,9 @@ packages:
       picomatch:
         optional: true
 
+  fflate@0.8.3:
+    resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
+
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -936,6 +969,9 @@ packages:
 
   hash-wasm@4.13.0:
     resolution: {integrity: sha512-GrWl7wsV46fKIXQZB5ebskLZLAmKL6d9RS0fspCxDeQyjoNu1AfTJTMLPOJyfzaQm0ldFiwFN21/w+sE/kgEFQ==}
+
+  headers-utils@3.0.2:
+    resolution: {integrity: sha512-xAxZkM1dRyGV2Ou5bzMxBPNLoRCjcX+ya7KSWybQD2KwLphxsapUVK6x/02o7f4VU6GPSXch9vNY2+gkU8tYWQ==}
 
   htmlparser2@10.1.0:
     resolution: {integrity: sha512-VTZkM9GWRAtEpveh7MSF6SjjrpNVNNVJfFup7xTY3UpFtm67foy9HDVXneLtFVt4pMz5kZtgNcvCniNFb1hlEQ==}
@@ -1516,6 +1552,23 @@ snapshots:
   '@esbuild/win32-x64@0.28.2':
     optional: true
 
+  '@forge/api@8.5.0(typescript@5.9.3)':
+    dependencies:
+      '@forge/auth': 1.0.0(typescript@5.9.3)
+      '@forge/egress': 3.0.1(typescript@5.9.3)
+      '@forge/i18n': 1.0.1(typescript@5.9.3)
+      '@forge/manifest': 13.9.0(typescript@5.9.3)
+      '@forge/util': 4.0.0(typescript@5.9.3)
+      headers-utils: 3.0.2
+    optionalDependencies:
+      typescript: 5.9.3
+
+  '@forge/auth@1.0.0(typescript@5.9.3)':
+    dependencies:
+      tslib: 2.9.1
+    optionalDependencies:
+      typescript: 5.9.3
+
   '@forge/bridge@7.3.0(@types/react@18.3.31)(react@18.3.1)(typescript@5.9.3)':
     dependencies:
       '@atlaskit/adf-schema': 56.7.3(react@18.3.1)
@@ -1559,6 +1612,10 @@ snapshots:
       typescript: 5.9.3
 
   '@forge/resolver@2.0.2(typescript@5.9.3)':
+    optionalDependencies:
+      typescript: 5.9.3
+
+  '@forge/util@4.0.0(typescript@5.9.3)':
     optionalDependencies:
       typescript: 5.9.3
 
@@ -1932,6 +1989,8 @@ snapshots:
     optionalDependencies:
       picomatch: 4.0.7
 
+  fflate@0.8.3: {}
+
   fsevents@2.3.3:
     optional: true
 
@@ -1942,6 +2001,8 @@ snapshots:
       path-scurry: 2.0.2
 
   hash-wasm@4.13.0: {}
+
+  headers-utils@3.0.2: {}
 
   htmlparser2@10.1.0:
     dependencies:

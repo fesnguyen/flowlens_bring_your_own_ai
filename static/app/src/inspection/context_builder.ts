@@ -28,6 +28,7 @@ export function buildGeneralContext(): string {
 }
 
 export type InspectionMaterials = {
+  issueKey: string;
   instruction: string;
   issue: string;
   schema: string;
@@ -43,6 +44,7 @@ export function buildInspectionMaterials(
     throw new Error('Invalid FlowLens JSON Schema.');
   }
   return {
+    issueKey: issue.key,
     instruction: buildGeneralContext(),
     issue: renderIssueContext(issue),
     schema: schemaText,
@@ -60,6 +62,6 @@ export function buildCopyContext(materials: InspectionMaterials): string {
     '## Required Output JSON Schema',
     'The following JSON is the authoritative output contract:',
     // Indentation prevents a JSON string containing backticks from closing a fence.
-    ...materials.schema.split(/\r?\n/).map(line => `    ${line}`),
+    materials.schema.split('\n').map(line => `    ${line}`).join('\n'),
   ].join('\n\n');
 }

@@ -1,18 +1,49 @@
 import type { InspectionMaterials } from './context_builder';
 
-export type InspectionAttachment = {
-  filename: string;
-  data?: Uint8Array;
+import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS, MAX_PACKAGE_BYTES } from '../../../../shared/inspection_limits';
+
+export type InspectionAttachment = { filename: string } & (
+  | { status: 'included'; data: Uint8Array<ArrayBuffer> }
+  | { status: 'excluded' | 'failed'; reason: string }
+);
+
+type AttachmentEntry = {
+  originalName: string;
+  packagedName?: string;
+  status: InspectionAttachment['status'];
   reason?: string;
 };
 
+type ZipFile = { name: string; data: Uint8Array<ArrayBuffer> };
+
 const encoder = new TextEncoder();
-const MAX_PACKAGE_BYTES = 25 * 1024 * 1024;
-const MAX_ATTACHMENTS = 50;
 
 function safeName(filename: string): string {
-  const name = filename.replace(/[\\/\x00-\x1f\x7f]/g, '_').replace(/\.\./g, '_').trim();
-  return name && name !== '.' ? name.slice(0, 160) : 'attachment';
+  const normalized = filename.normalize('NFKC')
+    .replace(/[<>:"/\\|?*\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]/g, '_')
+    .replace(/\.{2,}/g, '_').trim();
+  // Most filesystems limit names by bytes. Leave room for collision suffixes.
+  const bounded = encoder.encode(normalized).subarray(0, 160);
+  const name = new TextDecoder().decode(bounded).replace(/\ufffd$/, '').replace(/[. ]+$/, '');
+  if (!name) return 'attachment';
+  return /^(con|prn|aux|nul|com[1-9]|lpt[1-9]) *(?:\.|$)/i.test(name) ? `_${name}` : name;
+}
+
+function uniqueName(filename: string, used: Set<string>): string {
+  const base = safeName(filename);
+  const dot = base.lastIndexOf('.');
+  const stem = dot > 0 ? base.slice(0, dot) : base;
+  const extension = dot > 0 ? base.slice(dot) : '';
+  let candidate = base;
+  for (let suffix = 2; used.has(candidate.toLowerCase()); suffix++) {
+    candidate = `${stem}-${suffix}${extension}`;
+  }
+  used.add(candidate.toLowerCase());
+  return candidate;
+}
+
+function zipEntryBytes(file: ZipFile): number {
+  return 76 + 2 * encoder.encode(file.name).byteLength + file.data.byteLength;
 }
 
 function crc32(data: Uint8Array): number {
@@ -31,9 +62,9 @@ function write32(view: DataView, offset: number, n: number): void { view.setUint
  * Minimal ZIP writer (STORE method, UTF-8 filenames). No compression or
  * Node-only dependency, so it works in the Forge Custom UI browser.
  */
-function zip(files: { name: string; data: Uint8Array }[]): Blob {
-  const chunks: Uint8Array[] = [];
-  const central: Uint8Array[] = [];
+function zip(files: ZipFile[]): Blob {
+  const chunks: BlobPart[] = [];
+  const central: Uint8Array<ArrayBuffer>[] = [];
   let offset = 0;
   for (const file of files) {
     const name = encoder.encode(file.name);
@@ -61,44 +92,69 @@ function zip(files: { name: string; data: Uint8Array }[]): Blob {
   write32(ev, 0, 0x06054b50);
   write16(ev, 8, files.length); write16(ev, 10, files.length);
   write32(ev, 12, directorySize); write32(ev, 16, offset);
-  return new Blob([...chunks, ...central, end].map(part => new Uint8Array(part)), { type: 'application/zip' });
+  return new Blob([...chunks, ...central, end], { type: 'application/zip' });
 }
 
-/**
- * Accepts already-authorized attachment bytes; Jira fetching belongs to the
- * resolver, not to this pure package assembler. Skipped files are manifested.
- */
+/** Package authorized browser bytes and leave a manifest entry for every known attachment. */
 export function buildInspectionPackage(
   materials: InspectionMaterials,
   attachments: InspectionAttachment[] = [],
-): Blob {
-  const files = [
+  attachmentListingError?: string,
+): { archive: Blob; skipped: number } {
+  const files: ZipFile[] = [
     { name: 'instruction.md', data: encoder.encode(materials.instruction) },
     { name: 'issue.md', data: encoder.encode(materials.issue) },
     { name: 'flowlens.schema.json', data: encoder.encode(materials.schema) },
   ];
-  const entries: { originalName: string; packagedName?: string; status: string; reason?: string }[] = [];
+  const entries: AttachmentEntry[] = [];
+  const included: AttachmentEntry[] = [];
   const used = new Set<string>();
-  let total = files.reduce((sum, file) => sum + file.data.length, 0);
-  for (const [index, attachment] of attachments.entries()) {
-    const base = safeName(attachment.filename);
-    let filename = base;
-    for (let suffix = 1; used.has(filename.toLowerCase()); suffix++) filename = `${suffix}-${base}`;
-    used.add(filename.toLowerCase());
-    const data = attachment.data;
-    const reason = index >= MAX_ATTACHMENTS ? 'Attachment count limit exceeded'
-      : !data ? (attachment.reason || 'Attachment unavailable')
-      : total + data.length > MAX_PACKAGE_BYTES ? 'Package size limit exceeded' : undefined;
-    if (reason) {
-      entries.push({ originalName: attachment.filename, status: 'excluded', reason });
-    } else if (data) {
-      files.push({ name: `attachments/${filename}`, data });
-      total += data.length;
-      entries.push({ originalName: attachment.filename, packagedName: filename, status: 'included' });
+  // Include headers and file names in the archive limit, starting with the end record.
+  let total = files.reduce((sum, file) => sum + zipEntryBytes(file), 22);
+  for (const attachment of attachments) {
+    const entry: AttachmentEntry = { originalName: attachment.filename, status: attachment.status };
+    entries.push(entry);
+    if (attachment.status !== 'included') {
+      entry.reason = attachment.reason;
+      continue;
     }
+    const name = uniqueName(attachment.filename, used);
+    const file = { name: `attachments/${name}`, data: attachment.data };
+    const bytes = zipEntryBytes(file);
+    const reason = included.length >= MAX_ATTACHMENTS ? 'Attachment count limit exceeded'
+      : attachment.data.byteLength > MAX_ATTACHMENT_BYTES ? 'Attachment exceeds the 3 MiB limit'
+      : total + bytes > MAX_PACKAGE_BYTES ? 'Package size limit exceeded' : undefined;
+    if (reason) {
+      entry.status = 'excluded';
+      entry.reason = reason;
+      continue;
+    }
+    entry.packagedName = file.name;
+    included.push(entry);
+    files.push(file);
+    total += bytes;
   }
-  const manifest = encoder.encode(JSON.stringify({ version: 1, attachments: entries }, null, 2));
-  if (total + manifest.length > MAX_PACKAGE_BYTES) throw new Error('Inspection package exceeds size limit.');
-  files.push({ name: 'manifest.json', data: manifest });
-  return zip(files);
+
+  const metadata = {
+    version: 1,
+    issueKey: materials.issueKey,
+    instructionVersion: 1,
+    schemaId: (JSON.parse(materials.schema) as { $id?: string }).$id,
+    createdAt: new Date().toISOString(),
+    attachmentListingError,
+    attachments: entries,
+  };
+  const manifest: ZipFile = { name: 'manifest.json', data: encoder.encode(JSON.stringify(metadata, null, 2)) };
+  // If the manifest tips the archive over its budget, evict the last included attachment.
+  while (total + zipEntryBytes(manifest) > MAX_PACKAGE_BYTES) {
+    const entry = included.pop();
+    if (!entry) throw new Error('The inspection documents exceed the ZIP size limit.');
+    total -= zipEntryBytes(files.pop()!);
+    delete entry.packagedName;
+    entry.status = 'excluded';
+    entry.reason = 'Package size limit exceeded';
+    manifest.data = encoder.encode(JSON.stringify(metadata, null, 2));
+  }
+  files.push(manifest);
+  return { archive: zip(files), skipped: entries.length - included.length };
 }

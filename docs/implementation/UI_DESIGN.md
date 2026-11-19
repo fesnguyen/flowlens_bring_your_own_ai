@@ -1,6 +1,6 @@
 # UI Design — Implementation Specification
 
-**Status:** UI skeleton implemented; remaining features planned.  
+**Status:** Inspection header actions implemented. Import and persistence are planned.
 **Parents:** `../features/FLOW_VISUALIZATION.md`, `../features/INSPECTION_PROMPT.md`
 
 ## 1. Screen Overview
@@ -122,7 +122,7 @@ The labels below correspond to the screen diagrams above.
 
 The issue key comes from the trusted Forge/Jira context when available.
 
-**Current implementation:** Inspection actions are disabled placeholders. Actual generation, export, and import belong to later milestones.
+Copy and Package share loading and accessible feedback across both layouts. When clipboard access fails, a read-only field selects the entire prompt for manual copying. Package feedback includes skipped-file counts or an attachment-list error and a download link. Import JSON is disabled.
 
 ### B. Execution Flows / Flow Selector
 
@@ -463,4 +463,4 @@ The UI should allow a developer to:
 
 Test long titles, multiple findings, nested branches, loops, asynchronous edges, disconnected entry points, proposed flows, empty states, and narrow widths.
 
-The first UI skeleton may use mock data and disabled inspection actions. Future milestones will connect real JSON import, Forge persistence, and inspection generation.
+The graph and inspector display sample flows. Copy and Package use the current Jira issue. JSON import and Forge persistence are planned.

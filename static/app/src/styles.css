@@ -78,7 +78,7 @@ button:enabled, select, summary { cursor: pointer; }
 }
 .sample-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
 .wide-actions { gap: 8px; margin-left: auto; }
-.placeholder-action {
+.header-action {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -90,8 +90,28 @@ button:enabled, select, summary { cursor: pointer; }
   color: #566780;
   font-size: 12px;
   font-weight: 600;
-  cursor: not-allowed;
 }
+.header-action:not(:disabled):not([aria-disabled="true"]):hover {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+.header-action:disabled { opacity: 0.65; cursor: not-allowed; }
+.header-action[aria-disabled="true"] { cursor: wait; }
+.inspection-feedback, .inspection-prompt-fallback {
+  padding: 9px 20px;
+  border-bottom: 1px solid var(--border);
+  background: #f8fafd;
+}
+.inspection-feedback a { margin-left: 10px; color: var(--blue); }
+.inspection-error { color: #a02525; }
+.inspection-prompt-fallback { display: grid; gap: 6px; }
+.inspection-prompt-fallback textarea {
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  font: 12px/1.5 var(--mono);
+}
+.inspection-prompt-fallback button { justify-self: start; }
 .compact-actions { display: none; margin-left: auto; position: relative; }
 .compact-actions summary {
   display: flex;
@@ -120,7 +140,6 @@ button:enabled, select, summary { cursor: pointer; }
   background: #fff;
   box-shadow: 0 7px 25px #182e4f26;
 }
-.action-menu p { padding: 2px 4px; font-size: 11px; color: var(--muted); }
 .action-menu button { justify-content: flex-start; }
 
 .workspace {

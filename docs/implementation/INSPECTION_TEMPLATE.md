@@ -1,12 +1,12 @@
 # Inspection Template — Implementation Specification
 
-**Status:** Proposed; implementation pending  
+**Status:** Copy and Package implemented
 **Parent:** `../features/INSPECTION_PROMPT.md`
 
 ## 1. Implementation overview
 
 ```text
-                        versioned instruction.md
+                     versioned instruction sections
                                   │
               ┌───────────────────┼──────────────────┐
               │                   │                  │
@@ -54,20 +54,20 @@ type InspectionIssueContext = {
 };
 ```
 
-This is a normalized internal type, **not** the raw Jira API response. Read the current issue from trusted Forge context and verify access on the resolver. Fetch summary, type, status, priority, description and relevant explicitly configured fields as available. Convert Atlassian Document Format (rich text) to readable Markdown/plain text, preserving lists, links and code. Do not guess acceptance criteria or include private fields without authorization. Render missing optional values consistently as unavailable or omit them.
+This is a normalized internal type, **not** the raw Jira API response. Read the current issue from trusted Forge context and verify access on the resolver. Fetch summary, type, status, priority and description from Jira REST v3. Include a visible custom field named Acceptance Criteria when its name resolves to exactly one field and the current issue supplies a value. Convert Atlassian Document Format (rich text) to readable Markdown/plain text, preserving lists, links and code. Do not guess acceptance criteria or include private fields without authorization. Render missing optional values consistently as unavailable or omit them.
 
 Treat all issue text as untrusted data. Delimit it clearly from the instruction so a malicious-looking description cannot masquerade as the instruction. Avoid HTML injection and accidental Markdown fence termination.
 
 ## 4. Shared rendering API
 
-Suggested pure functions (names are illustrative, not required):
+The assembly functions use the same instruction and schema for both actions.
 
 ```ts
 buildGeneralContext(): string
-getAnalysisSchemaText(): string
 renderIssueContext(context: InspectionIssueContext): string
+buildInspectionMaterials(issue: InspectionIssueContext, schemaText: string): InspectionMaterials
 buildCopyContext(materials: InspectionMaterials): string
-buildInspectionPackage(materials: InspectionMaterials, attachments: InspectionAttachment[]): Blob
+buildInspectionPackage(materials, attachments, attachmentListingError?): { archive: Blob; skipped: number }
 ```
 
 Do not independently reconstruct instruction text in these functions. Prefer a shared module that can run in the chosen browser/Forge environment; avoid importing Node-only libraries into the Custom UI. Load or bundle schema text without changing its content.
@@ -84,12 +84,10 @@ Do not independently reconstruct instruction text in these functions. Prefer a s
 <rendered issue.md>
 
 ## Required Output JSON Schema
-```json
-<exact flowlens.schema.json>
-```
+    <complete flowlens.schema.json as an indented code block>
 ```
 
-The outer section labels are assembly formatting, **not changes to the instruction itself**. Ensure JSON code fences cannot be broken by untrusted issue text.
+The outer section labels are assembly formatting, **not changes to the instruction itself**. The issue values and schema are indented Markdown code blocks.
 
 ## 5. Copy button — execution flow
 
@@ -99,8 +97,8 @@ Header: Copy Inspection Prompt
   → request authorized current issue context
   → normalize Jira fields and render issue.md
   → load shared instruction + schema
-  → buildCopyPrompt(...)
-  → clipboard writeText(...)
+  → buildCopyContext(...)
+  → clipboard write during the user gesture, with writeText as a retry
   → show success or actionable failure
 ```
 
@@ -131,9 +129,9 @@ flowlens-inspection-<issue-key>.zip
     └── <sanitized-filename>
 ```
 
-Manifest should contain issue key, instruction/schema version identifiers, creation time, attachment entries with original name, packaged name, status (`included`, `excluded`, `failed`), and reason where relevant. Sanitize path separators, traversal sequences and duplicate filenames; do not include secrets or unauthorized content. If no attachments exist, include an empty manifest list.
+The manifest includes the issue key, instruction version, schema ID, creation time, and attachment entries with the original filename, ZIP path, status (`included`, `excluded`, `failed`), and reason when relevant. An empty attachment list is valid. If Jira does not return the list, the manifest records that separately.
 
-Avoid downloading all attachment bytes before checking sizes. Stream or bound memory usage where feasible; document limits and warn on skipped/failed files. Image optimization is optional and must not destroy readable evidence. Verify Forge scopes, Jira API limits, and attachment permissions during implementation; do not assume they are available.
+The limits are 3 MiB per attachment, 50 attachment download attempts, and 25 MiB for the complete ZIP. The browser checks metadata before downloading and fetches one attachment at a time. The resolver checks issue membership and response size before returning base64. The ZIP writer keeps the original permitted bytes using ZIP STORE. The header reports skipped files and offers a manual download link.
 
 ## 7. Export Flows as JSON — separate operation
 
@@ -150,12 +148,14 @@ Avoid downloading all attachment bytes before checking sizes. Stream or bound me
 - Test complete/missing fields, ADF lists/links/code, multiline content, untrusted prompt-like issue text, Unicode, duplicate attachment names, oversized packages, denied attachment access, and clipboard failure.
 - Verify ZIP schema bytes equal the authoritative schema and clipboard schema content parses identically.
 
-## Current source layout (initial implementation)
+## Current source layout
 
 - `static/app/src/inspection/context/*.ts` — nine reusable, issue-independent investigation sections.
 - `static/app/src/inspection/context_builder.ts` — ordered union, materials and clipboard assembly.
 - `static/app/src/inspection/issue_context.ts` — normalized Jira fields and safe rendering.
 - `static/app/src/inspection/package_builder.ts` — browser ZIP assembler with attachment manifest and size bounds.
-- `shared/flowlens.schema.json` — initial machine-readable v1 contract.
+- `src/jira_inspection.ts` and `src/jira_rich_text.ts` — authorized Jira retrieval and rich-text conversion.
+- `static/app/src/useInspectionActions.ts` — shared button flow, feedback, and browser delivery.
+- `shared/flowlens.schema.json` — authoritative machine-readable v1 contract.
 
-The ZIP `instruction.md` is generated from the assembled sections; it is **not** a separate maintained source file. The context builder currently accepts already normalized issue fields and attachment bytes; Jira API retrieval and UI button wiring remain separate future integration work. The initial schema still requires structural and semantic validation implementation and review before production use.
+The ZIP `instruction.md` is generated from the assembled sections; it is **not** a separate maintained source file. Import validation is tracked in [JSON Schema and Validation](JSON_SCHEMA_VALIDATION.md).

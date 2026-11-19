@@ -1,11 +1,11 @@
 # JSON Schema and Validation — Implementation Specification
 
-**Status:** Proposed; machine-readable schema not yet implemented.  
+**Status:** Schema bundled for Copy and Package. Import validation is planned.
 **Parent:** `../features/ANALYSIS_SCHEMA.md`
 
 ## Contract
 
-Create a versioned `flowlens.schema.json` (candidate: JSON Schema Draft 2020-12). It is the **only authoritative structural contract** for external AI-generated analysis files, import validation, inspection Copy/Package delivery, and later saved-flow JSON export. The general inspection instruction is a separate versioned Markdown asset, not part of this schema. Documentation explains the contract but must not become a divergent schema.
+`shared/flowlens.schema.json` defines the v1 contract in JSON Schema Draft 2020-12. It is the **only authoritative structural contract** for external AI-generated analysis files, import validation, inspection Copy/Package delivery, and later saved-flow JSON export. Versioned TypeScript context sections assemble the general inspection instruction independently of the schema. Documentation explains the contract but must not become a divergent schema.
 
 Top level: `version: 1`, `issue`, `analysis`, and nonempty flat `flows[]`. A flow includes `id`, `name`, `type`, `description`, `entryNodeIds`, `nodes`, `edges`, optional `conclusion` and `basedOnFlowId`. Reconcile exact required/optional fields against `ANALYSIS_SCHEMA.md` before freezing v1.
 
