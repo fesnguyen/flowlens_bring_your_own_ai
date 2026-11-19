@@ -1,13 +1,44 @@
 # Inspection Template — Implementation Specification
 
-**Status:** Proposed; implementation pending.  
+**Status:** Proposed; implementation pending  
 **Parent:** `../features/INSPECTION_PROMPT.md`
 
-## Single source of truth
+## 1. Implementation overview
 
-Maintain one versioned Markdown inspection template, with structured issue context injected into named placeholders. Do not duplicate prompt text in React, Forge resolver, and ZIP exporter. Include the **same machine-readable JSON Schema** in both output modes: inline for Copy, separate `flowlens.schema.json` in ZIP.
+```text
+                        versioned instruction.md
+                                  │
+              ┌───────────────────┼──────────────────┐
+              │                   │                  │
+         Jira issue fields   flowlens.schema.json   Jira attachments
+              │                   │                  │
+              ├──── Copy ─────────┤                  │
+              │                   │                  │
+              ▼                   ▼                  │
+        Markdown sections → Clipboard               │
+              │                   │                  │
+              └──── Package ──────┴──────────────────┘
+                                  ▼
+                 ZIP: instruction.md, issue.md,
+                 flowlens.schema.json, manifest.json,
+                 attachments/
+```
 
-## Inputs
+**Critical invariant:** The bytes/text of the general instruction are **identical** for Copy and Package, independent of the Jira issue. Do not interpolate issue fields or schema into the stored instruction asset. Compose separate sections only at delivery time.
+
+## 2. Source assets and ownership
+
+| Asset | Source | Rule |
+|---|---|---|
+| General instruction | One versioned Markdown asset, e.g. `instruction.md` | Written once, follows feature contract; no issue-specific placeholders |
+| Jira issue content | Forge resolver fetches permitted Jira issue fields | Normalize to a separate Markdown document |
+| JSON Schema | One versioned `flowlens.schema.json` | Import and both output actions use the exact same schema |
+| Attachments | Authorized Jira attachment metadata and bytes | Package only; never clipboard |
+| Manifest | Generated package metadata | Track attachments included/excluded/failed and reasons |
+
+The feature document specifies **what** the AI must do. This implementation document specifies **how** to assemble the instruction and inputs; do not maintain a second hand-written instruction inside React or resolver source.
+
+## 3. Jira issue context contract
 
 ```ts
 type InspectionIssueContext = {
@@ -23,38 +54,103 @@ type InspectionIssueContext = {
 };
 ```
 
-This is a proposed normalized internal type, not an existing Jira API response. Convert Jira rich-text descriptions to readable Markdown/plain text, preserving meaningful lists and links. Do not infer acceptance criteria when not explicitly available. Escape or delimit issue content so it cannot accidentally replace template instructions.
+This is a normalized internal type, **not** the raw Jira API response. Read the current issue from trusted Forge context and verify access on the resolver. Fetch summary, type, status, priority, description and relevant explicitly configured fields as available. Convert Atlassian Document Format (rich text) to readable Markdown/plain text, preserving lists, links and code. Do not guess acceptance criteria or include private fields without authorization. Render missing optional values consistently as unavailable or omit them.
 
-## Template sections in output order
+Treat all issue text as untrusted data. Delimit it clearly from the instruction so a malicious-looking description cannot masquerade as the instruction. Avoid HTML injection and accidental Markdown fence termination.
 
-1. Role and boundary: investigate/document, **do not modify code**.
-2. Jira context and missing-field policy.
-3. Scope selection: primary path, relevant failure/alternative paths, related async/retry processes; **one flow with branches** preferred where appropriate.
-4. Repository tracing and no-invention rules.
-5. Original source evidence: numbered tuples, omitted ranges and summaries, code comments.
-6. Findings, uncertainty, conclusions, optional proposed flows.
-7. JSON output filename, authoritative schema, semantic validation checklist.
-8. Deliverable: complete file plus short summary/limitations.
+## 4. Shared rendering API
 
-The content contract is defined in `../features/INSPECTION_PROMPT.md`; do not independently rewrite the investigation rules here.
-
-## Rendering API proposal
+Suggested pure functions (names are illustrative, not required):
 
 ```ts
-buildInspectionMarkdown(context, schemaText): string
-buildInspectionPackage(context, schemaText, attachments): Promise<Blob>
+getInspectionInstruction(): string
+getAnalysisSchemaText(): string
+renderIssueMarkdown(context: InspectionIssueContext): string
+buildCopyPrompt(instruction: string, issueMarkdown: string, schemaText: string): string
+buildInspectionPackage(
+  instruction: string,
+  issueMarkdown: string,
+  schemaText: string,
+  attachments: AttachmentResult[],
+): Promise<Blob>
 ```
 
-Use a deterministic template renderer; no arbitrary JavaScript execution. Include a template/schema version marker for debugging.
+Do not independently reconstruct instruction text in these functions. Prefer a shared module that can run in the chosen browser/Forge environment; avoid importing Node-only libraries into the Custom UI. Load or bundle schema text without changing its content.
 
-## Copy action
+**Clipboard payload order:**
 
-Retrieve current Jira context, generate Markdown with inline schema, copy to clipboard, and show success/failure. Do not include attachments. Handle missing clipboard permissions with a user-selectable fallback.
+```text
+# FlowLens Inspection Request
 
-## ZIP action
+## General Inspection Instruction
+<exact unchanged instruction.md>
 
-Generate `inspection.md` (same core instructions and context), `flowlens.schema.json`, and permitted attachments with safe filenames. Provide an attachment manifest listing included, excluded, or failed files and reasons. Enforce a package size limit before buffering large files; warn about missing or inaccessible attachments. Optimize images only when evidence remains legible.
+## Jira Issue Context
+<rendered issue.md>
 
-## Template tests
+## Required Output JSON Schema
+```json
+<exact flowlens.schema.json>
+```
+```
 
-Snapshot representative output for a complete issue, missing fields, multiline Jira rich text, special characters, long descriptions, and malicious-looking text embedded in an issue. Verify Copy and ZIP use identical core instructions and schema version.
+The outer section labels are assembly formatting, **not changes to the instruction itself**. Ensure JSON code fences cannot be broken by untrusted issue text.
+
+## 5. Copy button — execution flow
+
+```text
+Header: Copy Inspection Prompt
+  → disable/reject duplicate click while loading
+  → request authorized current issue context
+  → normalize Jira fields and render issue.md
+  → load shared instruction + schema
+  → buildCopyPrompt(...)
+  → clipboard writeText(...)
+  → show success or actionable failure
+```
+
+The UI must not silently fall back to sample issue content. If clipboard permission is denied or unsupported, provide a selectable/copyable text fallback. Never include attachment bytes. Include loading, success, and failure feedback in both wide and compact headers.
+
+## 6. Export Package button — execution flow
+
+```text
+Header: Export Inspection Package
+  → request same authorized issue context
+  → load identical instruction + schema
+  → enumerate accessible attachment metadata
+  → enforce file count, per-file and total size limits
+  → retrieve permitted bytes, recording failures
+  → assemble ZIP and manifest
+  → initiate download and report exclusions
+```
+
+**ZIP structure:**
+
+```text
+flowlens-inspection-<issue-key>.zip
+├── instruction.md
+├── issue.md
+├── flowlens.schema.json
+├── manifest.json
+└── attachments/
+    └── <sanitized-filename>
+```
+
+Manifest should contain issue key, instruction/schema version identifiers, creation time, attachment entries with original name, packaged name, status (`included`, `excluded`, `failed`), and reason where relevant. Sanitize path separators, traversal sequences and duplicate filenames; do not include secrets or unauthorized content. If no attachments exist, include an empty manifest list.
+
+Avoid downloading all attachment bytes before checking sizes. Stream or bound memory usage where feasible; document limits and warn on skipped/failed files. Image optimization is optional and must not destroy readable evidence. Verify Forge scopes, Jira API limits, and attachment permissions during implementation; do not assume they are available.
+
+## 7. Export Flows as JSON — separate operation
+
+**Not part of either inspection-request button.** When implemented, load authorized saved flows, convert persisted IDs to schema-valid export IDs, preserve node references and suggestion links, attach required issue/analysis metadata, validate the export, and download a JSON file. See `IMPORT_PIPELINE.md` and `FORGE_API_CONTRACTS.md`. Do not include saved flows in the inspection ZIP.
+
+## 8. Error handling and tests
+
+- No issue context / unauthorized: show error; never copy a fabricated sample issue.
+- Partial Jira fields: include available data and mark missing values.
+- Clipboard blocked: selectable text fallback.
+- Attachment failures: continue only with explicit manifest warnings; no silent omission.
+- Schema unavailable: fail both actions rather than emit an incomplete contract.
+- Snapshot the exact instruction section in Copy and ZIP and assert byte-for-byte equality.
+- Test complete/missing fields, ADF lists/links/code, multiline content, untrusted prompt-like issue text, Unicode, duplicate attachment names, oversized packages, denied attachment access, and clipboard failure.
+- Verify ZIP schema bytes equal the authoritative schema and clipboard schema content parses identically.
