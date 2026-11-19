@@ -14,6 +14,9 @@ resources:
     path: static/app/dist
     tunnel:
       port: 5173
+permissions:
+  scopes:
+    - read:jira-work
 app:
   id: ari:cloud:ecosystem::app/7784456b-a4d3-421a-b066-521e01766e3e
   runtime:

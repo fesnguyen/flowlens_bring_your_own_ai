@@ -3,6 +3,10 @@
 **Status:** Proposed.  
 **Parents:** `../features/ANALYSIS_SCHEMA.md`, `DATA_STORAGE.md`, `JSON_SCHEMA_VALIDATION.md`
 
+## Scope and neighboring operations
+
+This pipeline handles **Import JSON**: an external AI-produced `flowlens-analysis.json` becomes saved flows. It does **not** build the Copy Inspection Prompt or Export Inspection Package; those actions use `INSPECTION_TEMPLATE.md`. A separate future **Export Flows as JSON** operation reads saved flows, reconstructs a schema-compatible analysis document (including issue and analysis provenance), maps persistent IDs to export IDs, validates it, and downloads JSON. It does not produce the inspection ZIP or include attachments.
+
 ## Sequence
 
 ```text

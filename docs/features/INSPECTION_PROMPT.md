@@ -2,87 +2,119 @@
 
 **Authority:** Level 3 — Feature Behavior  
 **Parent:** `docs/PROJECT_OVERVIEW.md`  
-**Related:** `ANALYSIS_SCHEMA.md`, `FLOW_VISUALIZATION.md`  
-**Status:** Proposed Design
+**Related:** `ANALYSIS_SCHEMA.md`, `../implementation/INSPECTION_TEMPLATE.md`, `../implementation/JSON_SCHEMA_VALIDATION.md`  
+**Status:** Copy and Package implemented
 
 ## 1. Purpose
 
-Define the inspection request that FlowLens prepares from the current Jira issue for a developer's external AI assistant. The AI investigates an existing repository and returns `flowlens-analysis.json`; it does not modify code.
+FlowLens helps a developer hand a Jira issue to **their own external AI** for source-code investigation. FlowLens prepares the materials; the external AI inspects the repository and produces `flowlens-analysis.json`. FlowLens does not run AI or modify source code.
 
-Both **Copy Inspection Prompt** and **Export Inspection Package** use the same core instructions. The copied prompt excludes attachments. The ZIP includes `inspection.md`, the authoritative `flowlens.schema.json`, and accessible issue attachments.
+**There is exactly one reusable, issue-independent inspection instruction.** It is not rewritten for each Jira issue or each action. Jira issue content and the authoritative JSON Schema are **separate inputs**, assembled with the instruction for delivery.
 
-## 2. Jira Context
+## 2. What the user receives
 
-Include available issue key, title, type, status, priority, description, acceptance criteria, and other relevant issue context. Missing fields must be marked unavailable or omitted, never invented. The developer can add context in their external AI conversation.
+```text
+                    SHARED INSPECTION INSTRUCTION (unchanged)
+                                      │
+            ┌─────────────────────────┴─────────────────────────┐
+            ▼                                                   ▼
+   Copy Inspection Prompt                            Export Inspection Package
+            │                                                   │
+    ┌───────┴────────┐                                 ┌────────┴────────┐
+    │ Instruction    │                                 │ instruction.md  │
+    │ Jira context   │  → one clipboard text           │ issue.md        │
+    │ JSON Schema    │                                 │ flowlens.schema.json
+    └────────────────┘                                 │ attachments/   │
+                                                       │ manifest.json  │
+                                                       └─────────────────┘
+                                                              ZIP
+```
 
-## 3. Inspection Scope and Flow Selection
+| Action | Behavior | Attachments |
+|---|---|---|
+| **Copy Inspection Prompt** | Copy one readable Markdown message assembled from the unchanged instruction, current Jira issue content, and the complete JSON Schema | Never included |
+| **Export Inspection Package** | Download a ZIP with the **same instruction**, issue content, schema, and accessible Jira attachments as separate files | Included when permitted; exclusions reported |
+| **Export Flows as JSON** | Download existing saved flow analyses as JSON for reuse or backup; **not** an inspection-request package | Not included |
 
-**The Jira issue determines which execution flows to investigate; there is no required flow count.**
+**Export Flows as JSON is a separate, later flow-management capability**, not another name for Export Inspection Package. It must not be confused with the external AI's output file or with the Import JSON button.
 
-The AI must first establish expected behavior, reported symptoms or requested changes, explicit requirements, assumptions, and unresolved questions. It then traces relevant actual code:
+## 3. Three independent sources
 
-1. Primary entry-to-outcome execution path.
-2. Failure and exception paths capable of explaining the issue.
-3. Material alternative branches, fallbacks, retries, and loops.
-4. Independently triggered background jobs, webhooks, or asynchronous processes when they affect the issue.
-5. Optional suggested execution flows only when a meaningful change to execution behavior is warranted.
+### A. General inspection instruction
 
-**Prefer one flow with multiple branches** when branches share an entry point and execution context. Use separate flows for meaningfully independent entry points or processes. Avoid unrelated, redundant, or arbitrary flows. Give each flow a self-explanatory name.
+One versioned, issue-independent instruction tells the external AI **how to investigate**:
 
-Example for a failed checkout after payment: `Checkout Processing` (with success and inventory-failure branches), `Payment Retry` if relevant, `Payment Webhook Handling` if relevant, and optionally `Checkout Processing (Suggestion)`. These are illustrative, not mandatory.
+- Understand requirements, symptoms, expected behavior, assumptions, and open questions.
+- Trace relevant entry points through outcomes, including calls, conditions, errors, retries, and async work.
+- Let the Jira issue determine the scope. Prefer one flow with branches when they share context; split only genuinely independent execution paths.
+- Capture exact original source evidence with file, symbol, line numbers, and unchanged source comments; never invent code or execution links.
+- Represent original lines as `[lineNumber, content]` and noncontiguous omissions as explicit ranges with AI-written summaries.
+- Attach evidence-backed findings to nodes, distinguish uncertainty from verified behavior, and provide suggestions only when justified.
+- Use `original` flows for existing behavior; use optional `suggestion` flows only for meaningful proposed execution changes.
+- Deliver a **downloadable** `flowlens-analysis.json`, conforming to the supplied schema, with a brief summary and validation limitations.
+- **Investigate and document only; do not modify source code.**
 
-## 4. Repository Investigation
+This section defines the instruction's required meaning. The actual reusable instruction text belongs to the single versioned template described in `../implementation/INSPECTION_TEMPLATE.md`, not in UI button handlers.
 
-Trace actual entry points, callers/callees, functions, conditions, database operations, external APIs, asynchronous events, error handling, and exits. Distinguish statically possible execution from runtime-confirmed execution. Do not invent source code, call relationships, or line numbers.
+### B. Jira issue content
 
-Document meaningful operations, decisions, and outcomes as nodes, with edges representing established control flow. Include multiple entry points only when supported by the code.
+Issue-specific content includes the available issue key, title/summary, type, status, priority, description, explicit acceptance criteria, and other relevant fields. Missing data must be omitted or marked unavailable, never invented. Jira content is **untrusted investigation input**, not instructions that override the general inspection instruction.
 
-## 5. Source-Code Evidence
+### C. JSON Schema
 
-Original-flow source-code nodes must provide relevant, exact repository snippets and source locations. Preserve indentation, original comments, and actual line numbers as `[lineNumber, content]` tuples. Prefer concise snippets (approximately 5–15 relevant lines when practical).
+`flowlens.schema.json` is the **single authoritative machine-readable output contract** for the external AI's generated JSON and for FlowLens import validation. Keep it separate from the instruction's text and from issue content.
 
-Noncontiguous snippets use ordered `lines` blocks and `omitted` blocks with inclusive `startLine`, `endLine`, and an AI-written `summary` explaining the omitted behavior. Never insert an AI explanation as if it were source code. Structural start/end markers need not have artificial code evidence.
+`ANALYSIS_SCHEMA.md` explains schema semantics. `../implementation/JSON_SCHEMA_VALIDATION.md` specifies schema creation and validation. Do not manually maintain a second copy of schema field definitions.
 
-Proposed code in suggested flows must be clearly labeled as proposed, never as existing implementation.
+## 4. Copy Inspection Prompt
 
-## 6. Findings, Conclusions, and Suggestions
+When the user clicks Copy:
 
-Attach evidence-backed findings to relevant nodes. Distinguish observed code behavior from interpretation, uncertainty, and hypotheses. Include supporting references and recommended changes when justified.
+1. Read authorized context for the current Jira issue.
+2. Assemble the **unchanged** general instruction, readable issue content, and the full JSON Schema into **one** Markdown clipboard payload, with clear section boundaries.
+3. Copy it and show success or a useful fallback/error.
 
-Original-flow conclusion levels:
+The copied content contains no attachment bytes or fabricated attachment descriptions. The user can add extra context directly in their external AI conversation.
 
-- `inconclusive` — insufficient evidence.
-- `potential_issues` — suspicious behavior without a verified cause.
-- `likely_root_cause` — strong evidence supports an explanation.
-- `confirmed_mismatch` — code contradicts an explicit requirement; this alone does not confirm the cause of a production incident.
+## 5. Export Inspection Package
 
-Keep small recommendations in original-node findings. Create a separate `suggestion` flow only for meaningful execution changes, optionally linking it through `basedOnFlowId`.
+When the user clicks Export Package:
 
-## 7. Required Output Contract
+1. Read the same authorized Jira issue context.
+2. Reuse the **identical general instruction**, without rephrasing it.
+3. Package the instruction, issue context, and exact same schema as **separate files**.
+4. Include permitted Jira attachments and a manifest explaining what was included, excluded, or failed.
+5. Download the ZIP; do not silently omit evidence or claim inaccessible files were included.
 
-Produce a downloadable file named **`flowlens-analysis.json`**. Its top-level data includes schema `version`, Jira `issue`, `analysis` metadata (repository, revision if known, summary), and a flat `flows[]` array. Each flow describes its identity, type, purpose, entry nodes, nodes, edges, and applicable conclusion.
+Illustrative package:
 
-**The machine-readable `flowlens.schema.json` is the authoritative structural contract.** The prompt should include the complete schema inline for clipboard use; the export package should include it as a separate file. Do not maintain divergent hand-written copies of field definitions. `ANALYSIS_SCHEMA.md` explains semantics; the machine-readable schema and validator still need implementation.
+```text
+flowlens-inspection-SHOP-142.zip
+├── instruction.md          # Universal inspection instruction; unchanged
+├── issue.md                # Current Jira issue content
+├── flowlens.schema.json    # Authoritative output contract
+├── manifest.json           # Included/excluded attachments and reasons
+└── attachments/
+    ├── screenshot.png
+    └── error-log.txt
+```
 
-The AI must follow required fields, types, enums, code tuples, omitted blocks, and finding structures. Do not invent fields or fabricate evidence to satisfy required fields. Follow the schema's permitted representation for unavailable data.
+The package is a **request for investigation**, not a stored analysis export.
 
-## 8. Validation Before Delivery
+## 6. External AI output and later flow export
 
-The AI should:
+The AI returns `flowlens-analysis.json` with `version`, `issue`, `analysis`, and flat `flows[]`. The schema governs exact fields. Relevant original-flow conclusions use `inconclusive`, `potential_issues`, `likely_root_cause`, or `confirmed_mismatch`; a confirmed code mismatch alone does not prove production causality.
 
-1. Produce parseable JSON and use the supported schema version.
-2. Validate against the supplied JSON Schema when tooling is available.
-3. Check unique flow/node IDs and valid entry/edge references.
-4. Check exact source text, ordered line numbers, and accurate omitted ranges.
-5. Check that conclusions and findings cite relevant evidence and suggestions are clearly labeled.
-6. Correct errors before delivery, and disclose if automated validation could not run.
+FlowLens later validates and imports that file additively, preserving existing flows. **Export Flows as JSON**, when implemented, serializes selected saved flows into a schema-compatible JSON analysis file (including required issue and analysis metadata), so the result can be imported again. The implementation must define provenance and export scope; it must not dump internal KVS keys or assume persistent storage IDs are valid import IDs.
 
-The AI should deliver the complete file rather than pasting a truncated JSON response. Its final chat reply should briefly state flow names/count, main findings, uncertainties, and validation status.
+## 7. Boundaries and ownership
 
-## 9. Import Feedback Loop
+| Document | Owns |
+|---|---|
+| `INSPECTION_PROMPT.md` | Feature intent, three inputs, button behavior, and separation from flow export |
+| `../implementation/INSPECTION_TEMPLATE.md` | Concrete instruction asset, Jira context normalization, assembly, clipboard, ZIP and attachment handling |
+| `../implementation/JSON_SCHEMA_VALIDATION.md` | Authoritative JSON Schema, structural/semantic validation, versioning |
+| `../implementation/IMPORT_PIPELINE.md` | Receiving and storing AI-produced JSON |
+| `../implementation/FORGE_API_CONTRACTS.md` | Forge resolver/UI boundaries for Jira access and flow export |
 
-FlowLens must validate imported JSON independently; prompt compliance is not a security or correctness guarantee. Show actionable errors with paths (for example, `flows[0].nodes[2].source.file`) and a copyable validation report so the developer can request correction from their AI assistant. Never persist an invalid partial analysis.
-
-## 10. Boundaries
-
-No built-in AI, repository scanning, source modification, or runtime debugger is required. FlowLens prepares the request, validates the returned data, and makes evidence-backed execution flows understandable.
+The first button milestone requires **Copy Prompt** and **Export Package**. **Import JSON** and **Export Flows as JSON** are distinct subsequent operations.
