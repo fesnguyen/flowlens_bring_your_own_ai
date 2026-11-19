@@ -23,12 +23,13 @@ const actions = [
 ] as const;
 
 /** Both header layouts use the same buttons and operation state. */
-function Header({ issueKey, status, busy, run, onImport }: {
+function Header({ issueKey, status, busy, run, onImport, sample }: {
   issueKey: string;
   status: string;
   busy?: InspectionAction;
   run: (action: InspectionAction, trigger: HTMLElement) => void;
   onImport: () => void;
+  sample: boolean;
 }) {
   const actionButtons = (
     <>
@@ -68,7 +69,7 @@ function Header({ issueKey, status, busy, run, onImport }: {
       {/* CENTER: Jira issue key and sample-data indicator */}
       <div className="issue-context">
         <span className="issue-key" title={status}>{issueKey}</span>
-        <span className="sample-label">Sample data</span>
+        {sample && <span className="sample-label">Sample data</span>}
       </div>
 
       {/* RIGHT: Inspection action buttons on wide screens */}
@@ -385,7 +386,7 @@ export default function App() {
   return (
     <main className="flowlens">
       {/* ===== TOP HEADER: Branding, Jira issue, and inspection actions ===== */}
-      <Header issueKey={issueKey ?? issue.key} status={bridgeStatus} busy={busy}
+      <Header issueKey={issueKey ?? inspection.issue.key} status={bridgeStatus} busy={busy} sample={inspection === mockInspection}
         run={(action, trigger) => {
           actionTrigger.current = trigger;
           void run(action);
