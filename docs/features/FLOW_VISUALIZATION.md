@@ -9,7 +9,7 @@
 
 Define how FlowLens presents AI-generated execution flows inside a Jira issue.
 
-The visualization must help developers understand actual execution paths, inspect relevant source code, and evaluate potential issues without constantly switching to an IDE.
+The visualization must help developers understand actual execution paths, understand relationships and potential change impact, and inspect optional evidence without constantly switching tools.
 
 The diagram is an investigation tool, not merely a collection of connected function names.
 
@@ -69,73 +69,34 @@ Automatic layout is preferred. AI-generated JSON should not need to specify scre
 
 ## 4. Node Presentation
 
-**Nodes are compact execution explanations, not merely function-name boxes.** The developer should understand most of the flow by reading the diagram, opening details only to verify evidence.
+A node is a meaningful investigation step, not necessarily a function. The universal presentation is:
 
-Use content-aware node variants:
+1. **Header:** prominent title and optional sequence number/type.
+2. **Subheader:** short responsibility or context.
+3. **Additional information:** ordered, flexible content blocks supplied by the user's AI. Blocks may contain explanations, conditions, code, scenarios, warnings, diagnostics, findings, or impact analysis.
+4. **Relationships:** explicit connections to other nodes, rendered by the diagram rather than assumed from the node's text.
 
-- **Operation / call nodes:** prominent title; file and function; short explanation of what happens and why it matters; a small (roughly 3–6 line) original-code preview where available; finding count/indicator; source line range.
-- **Decision nodes:** condition prominently displayed, with clearly labeled outgoing branches (for example Yes/No, success/failure). Show a short condition snippet when available.
-- **Error / retry / async nodes:** visually communicate the transition type and its consequence without implying unverified behavior.
-- **Start / end nodes:** compact, with meaningful entry or outcome labels; artificial source code is not required.
-- **Suggested-flow nodes:** visibly marked as proposed rather than current repository behavior.
+Only the identifier and meaningful title are universally necessary for a displayable node. A subheader, detail blocks, source reference, warnings and impacts are optional. Never force a fixed set of AI diagnostic fields on every node.
 
-Operation nodes should generally be wider than conventional flowchart boxes (initial design target approximately **300–380 CSS px**, subject to responsive constraints). Node height may grow with meaningful content. Avoid rigid equal sizing that truncates important explanations. Do not render entire functions in the graph.
+Use left-to-right execution order where supported. Number steps when an order is established; branches, loops and async transitions must not be flattened into an invented total order. Allow details to expand without overcrowding the canvas. Selecting a node should reveal its full content.
 
-The initial diagram should remain readable at ordinary zoom. Full code, all findings, and evidence belong in the selected-node details area.
+### 4.1 Relative impact
 
-### 4.1 Inspection-Driven Screen Layout
+A node may include an optional **Relative Impact** section for a proposed change. Each impact identifies a related node, relationship type, potential consequence, reason and what to verify. Highlight impacted nodes and provide navigation within the diagram. The affected set is not restricted to outgoing execution edges: callers, shared configuration and state can matter too.
 
-The primary Jira issue-panel view contains:
+Label AI-estimated impact as unverified unless there is separate evidence. Do not imply that selecting a node performs a real-time code analysis; FlowLens displays imported information.
 
-1. **Header / inspection actions:** Copy Inspection Prompt, Export Inspection Package, Import JSON.
-2. **Flow sidebar:** flat list of flows with original/suggestion distinctions and concise conclusion status; select and delete individual flows.
-3. **Main diagram canvas:** left-to-right graph, auto-layout, labeled branches, pan/zoom/fit.
-4. **Selected-node details:** original code with numbered lines and omitted summaries; node explanation, findings, recommendations, and source references.
-5. **Flow-level context:** investigation summary, repository/revision when known, conclusion, evidence, and unresolved questions.
+### 4.2 Source references (deferred)
 
-On sufficiently wide screens, the diagram and selected-node details may be visible together. On narrower Jira panels, use a responsive stacked or switchable layout rather than squeezing code into unreadable columns. Keep the graph as the main navigation surface and the code viewer as the main evidence surface.
+File paths, function names, line ranges and code snippets may appear as optional content. They are **not required** to display or import a node. Direct source navigation, line highlighting and a dedicated mandatory code viewer are out of scope for this direction.
 
-### 4.2 Interaction
+### 4.3 Screen layout and interactions
 
-Selecting a flow updates the graph and conclusion. Selecting a node updates the details pane without losing diagram position. Finding indicators on nodes reveal relevant findings in details. Suggested flows remain separately selectable; optional links can navigate to their original flow. A graph with no selected node should show useful flow-level context.
+Provide inspection actions, a list of imported flows, the connected diagram, and selected-node details. Keep responsive layout, pan/zoom/fit, labeled branches and flow-level context. A graph with no selected node may show flow-level context.
 
-This is a conceptual UI contract, not a requirement to reproduce a particular mockup pixel-for-pixel.
+## 5. Evidence and uncertainty
 
-## 5. Source-Code Viewer
-
-Code evidence is central to FlowLens.
-
-The source-code viewer must:
-
-- Preserve code indentation.
-- Display original source line numbers.
-- Support syntax highlighting when practical.
-- Show noncontiguous source segments.
-- Clearly indicate omitted line ranges, including a brief explanation of what the omitted code does.
-- Display real source-code comments with their original line numbers.
-- Render omitted-range explanations in a muted, distinct color that does not compete with code syntax.
-- Distinguish original code from proposed code.
-
-For example:
-
-```python
-35  # Capture the customer's payment through the gateway.
-36  payment = await gateway.capture(
-37      customer_id=request.customer_id,
-38      amount=amount
-39  )
-
-    ... Lines 40–59 omitted (Create the order, record transaction details, and update payment metadata) ...
-
-60  if payment.success:
-61      order.status = "PAID"
-```
-
-Omitted-line indicators and their AI-generated summaries are presentation elements, not original source-code statements. They are shown inline in a muted, distinct color; real source-code comments remain numbered source lines.
-
-Each retained line is supplied as `[lineNumber, content]` in the analysis JSON. This preserves line identity for possible future highlighting or annotations, without requiring those interactions now.
-
-The interface should make it possible to understand important conditions and operations without displaying an entire large function.
+AI-generated explanations, suspected bugs and potential impacts must be distinguishable from verified observations. Imported code snippets, if present, are untrusted content and must be rendered safely. Structural validation does not prove source accuracy. The developer verifies relevant claims.
 
 ## 6. Findings and Recommendations
 
@@ -146,7 +107,7 @@ A finding may include:
 - Title and severity.
 - Investigation status.
 - Explanation.
-- Supporting code references.
+- Supporting evidence when available.
 - Recommended changes.
 
 Findings must be visually distinguishable from verified source-code behavior.
@@ -188,7 +149,7 @@ Users should be able to:
 
 - Navigate between connected nodes.
 - Follow execution branches.
-- Inspect code evidence.
+- Inspect optional evidence and explanations.
 - Review node-level findings.
 - Move around large diagrams.
 - Zoom and fit the diagram to the available space.
@@ -216,7 +177,7 @@ FlowLens should remain usable through appropriate layout, navigation, and progre
 
 The application should avoid rendering every long code snippet fully expanded by default.
 
-The full analysis must remain accessible without requiring users to open external tools.
+The full imported analysis must remain accessible in FlowLens; external source navigation is not required.
 
 ## 11. Design Principles
 
