@@ -9,15 +9,11 @@
 
 ## 1. Project Vision
 
-FlowLens helps developers understand source-code execution flows related to Jira issues through interactive, AI-generated diagrams backed by actual source-code evidence.
+FlowLens (Bring Your Own AI) helps developers investigate an issue by mapping the relevant system behavior into an understandable, connected diagram. The objective is developer understanding and informed change decisions, not automatic bug fixing.
 
-The goal is simple:
+Jira Cloud is the initial integration and issue entry point; the investigation model is general-purpose and must not require Jira-specific concepts in every node.
 
-**Open a Jira issue, ask your own AI to inspect the source code, import its analysis, and quickly understand how the relevant code works and where problems might exist.**
-
-FlowLens focuses on helping developers investigate and understand code, not generating or modifying it.
-
-It is not intended to replace an IDE, an AI coding assistant, or a debugger.
+The developer brings an AI assistant with access to their code. The AI investigates and returns structured analysis. FlowLens validates and visualizes it. The developer verifies assumptions, understands relationships and relative impact, and chooses a solution.
 
 ## 2. Core Philosophy
 
@@ -35,7 +31,7 @@ FlowLens is responsible for preparing inspection instructions, accepting the res
 
 Execution flows must be grounded in actual source code.
 
-Every source-code node must include relevant original code snippets and line references.
+Source references, file paths, line numbers and code snippets are optional investigation content, not universal node requirements. Source navigation is deferred. Never present an AI assertion as verified repository evidence.
 
 AI-generated explanations must remain distinguishable from source-code evidence.
 
@@ -144,7 +140,7 @@ Users should be able to identify:
 - Where execution ends or fails.
 - Which parts of the implementation may contain problems.
 
-Each source-code node should provide enough relevant code evidence for the user to understand the step without immediately opening an IDE.
+Each node should explain its responsibility and relevant behavior. Optional details may include code, evidence, warnings and relative impact; source navigation is deferred.
 
 ## 5. Execution Flow Requirements
 
@@ -175,24 +171,17 @@ Connections represent execution relationships, including conditional branches.
 
 The diagram must communicate actual execution logic rather than merely listing related functions.
 
-### Source-Code Evidence
+### Flexible Investigation Nodes
 
-Every node representing source-code behavior must include relevant original code snippets.
+Each node has an identifier, a header/title, an optional subheader/short responsibility, and optional ordered additional-information blocks. The AI may supply explanations, conditions, code, diagnostics, warnings, scenarios, and change considerations. The format must accommodate diverse user AI instructions without requiring every possible content type.
 
-Snippets should:
+Nodes can represent files, functions, components, decisions, operations, or outcomes. Relationships and execution order are explicit; do not confuse an execution edge with proof of change impact. A diagram should cover all identifiable relevant parts of the investigated behavior, while distinguishing confirmed relationships from hypotheses.
 
-- Preserve original code rather than AI-rewritten approximations.
-- Include source file paths and original line numbers.
-- Focus on statements relevant to the node.
-- Avoid unnecessarily including entire large functions.
-- Clearly indicate omitted sections when showing noncontiguous code.
-- Preserve important conditions, operations, and error-handling logic.
+Source references and code navigation are optional and deferred; do not require them to import or display a node.
 
-Typical snippets may contain approximately 5–15 relevant lines, but clarity and evidence take priority over a fixed length.
+### Relative Impact
 
-Explanations and annotations must remain separate from original source code.
-
-Non-code structural elements, such as visual start or end markers, do not require artificial code snippets.
+When a developer considers changing a node, optional impact analysis identifies potentially affected nodes, relationship types (such as caller, dependency, shared state or downstream behavior), reasons, and recommended verification. An impact can exist without a direct execution edge. Impacts are AI assessments unless independently verified.
 
 ### Potential Issues
 
@@ -246,7 +235,7 @@ FlowLens succeeds when a developer can:
 3. Use their preferred AI assistant to investigate the actual source code.
 4. Import a structured analysis containing one or more execution flows.
 5. Understand the relevant execution paths through interactive diagrams.
-6. Review original code evidence and potential issues without constantly switching to an IDE.
+6. Review responsibilities, relationships, potential issues, and optional supporting evidence without constantly switching tools.
 7. Manage multiple analyses independently within the same issue.
 
 The experience should be straightforward, trustworthy, and useful even when the developer is unfamiliar with the codebase.
@@ -283,6 +272,6 @@ When documentation conflicts, the higher-level product requirements take precede
 
 ## 10. Guiding Principle
 
-**FlowLens exists to turn complex source-code investigations into understandable, evidence-backed execution flows with minimal effort from the developer.**
+**FlowLens exists to help developers understand issues, relevant system behavior, and the potential impact of changes using their own AI.**
 
 Every product decision should support that goal.

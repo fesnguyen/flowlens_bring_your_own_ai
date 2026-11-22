@@ -96,8 +96,8 @@ The React frontend handles:
 - Copying Markdown to the clipboard.
 - Downloading inspection packages.
 - Selecting and importing JSON files.
-- Displaying execution flows.
-- Handling diagram interactions.
+- Displaying flexible investigation nodes and execution relationships.
+- Handling diagram interactions and optional relative-impact highlighting.
 - Presenting validation errors and findings.
 
 The frontend may use supported Forge Bridge APIs to access Jira context and permitted Jira REST operations.
@@ -167,7 +167,7 @@ The import process should:
 1. Read the selected file.
 2. Parse the JSON.
 3. Validate its schema version and structure.
-4. Validate nodes, edges, and source-code evidence.
+4. Validate nodes, edges, and version-specific optional/required evidence fields.
 5. Identify the current Jira issue.
 6. Resolve imported flow identities and names.
 7. Persist the accepted flows.
@@ -278,7 +278,7 @@ The application should preserve existing data when an import fails.
 - Keep application logic simple and cohesive.
 - Reuse shared contracts and avoid duplicate validation rules.
 - Separate presentation concerns from authoritative persistence operations.
-- Preserve imported source-code evidence.
+- Preserve imported content and optional source evidence without assuming every node has a source reference.
 - Avoid unnecessary abstractions.
 - Keep implementation details documented without duplicating the product overview.
 

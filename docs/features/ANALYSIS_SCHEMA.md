@@ -8,7 +8,7 @@
 
 Define the structured JSON format produced by an external AI assistant and imported into FlowLens.
 
-The schema must support multiple independently manageable execution flows, source-code evidence, investigation findings, and optional AI-proposed changes.
+The schema must support multiple independently manageable execution flows, flexible investigation content, optional evidence, findings, relative impacts, and optional AI-proposed changes.
 
 This document defines the data contract, not the visualization or persistence implementation.
 
@@ -35,45 +35,24 @@ Each flow contains:
 
 All flows remain in one flat array. There is no mandatory grouping or pairing structure.
 
-## 3. Nodes
+## 3. Nodes — target contract (planned revision)
 
-Nodes represent meaningful execution steps, including:
+A node is an investigation step (file, function, component, operation, condition, error or outcome). The universal target structure contains:
 
-- Function or method execution.
-- Conditions and branching decisions.
-- Important operations.
-- Exceptions and error handling.
-- Outcomes and termination.
+- Required: unique node ID within the flow, meaningful header/title.
+- Optional: kind/type, subheader/short responsibility, ordered flexible content blocks, findings, warnings, diagnostics, relative impacts and source references.
+- Flexible blocks must preserve their order and representable content without requiring one prescribed AI investigation style.
+- An optional impact item identifies a target node, relationship category, possible consequence, rationale, verification guidance and evidence status.
 
-Each source-code node must contain:
+Do not equate an execution edge with a change-impact relationship. Impact references must resolve to known nodes when a target node ID is supplied. AI hypotheses remain labeled as such.
 
-- Unique node ID within its flow.
-- Node type and title.
-- Purpose or explanation.
-- Source file path and function or symbol name.
-- Original line references.
-- Relevant code segments.
-- Optional findings and suggested fixes.
+### Compatibility and schema status
 
-Structural start/end markers may omit source-code evidence when they do not represent actual executable code.
+**This is the intended next schema, not the current v1 JSON contract.** The existing `shared/flowlens.schema.json` still requires source/code for certain nodes and uses fixed fields. The example below documents **current v1**, not the flexible target. A future implementation task must version or migrate the authoritative schema, update the instruction asset and import validator together, and add compatibility tests. Do not silently loosen documentation while claiming existing imports accept the new shape.
 
-## 4. Source-Code Evidence
+## 4. Optional Source Evidence
 
-Original-flow code snippets must preserve actual source code and line numbers.
-
-A snippet may contain multiple noncontiguous segments. Each original source line is represented as a two-element tuple `[lineNumber, content]`, preserving its actual line number and exact source text, including source-code comments.
-
-The `code[]` array contains ordered `lines` blocks and optional `omitted` blocks. A `lines` block holds an array of `[lineNumber, content]` tuples. An `omitted` block records `startLine`, `endLine` (inclusive), and a brief AI-generated `summary` explaining what the omitted code does; the summary may describe several operations when needed.
-
-Omitted ranges must accurately cover the gaps between retained source lines, without overlapping or inventing line numbers. The summary is analysis metadata, not a source-code comment. The UI renders omitted ranges inline with muted styling.
-
-The tuple format provides stable line references for potential future highlighting and line-level annotations; those features are not part of the current contract.
-
-The AI must not fabricate source code, line numbers, or repository references.
-
-For suggested flows, proposed code must be explicitly distinguished from existing source code.
-
-Code snippets should be concise, usually around 5–15 relevant lines when practical.
+File paths, symbol names, line numbers and original code snippets are optional in the target contract. When provided, preserve original code accurately and distinguish AI summaries from source text. Source navigation and line highlighting are deferred. Do not invent missing references.
 
 ## 5. Edges
 
@@ -233,7 +212,7 @@ This is an illustrative contract example, not a finding from a real repository.
 - Each flow is independently identifiable.
 - Flow IDs and node IDs must satisfy their respective uniqueness rules.
 - Every edge must reference valid nodes.
-- Every original source-code node must contain code evidence.
+- Current v1 requires code evidence; the planned contract will make it optional only after the schema is revised.
 - Each source line tuple must contain an actual positive line number and its original text, including any existing code comments.
 - Line numbers must be ordered and nonduplicated; omitted ranges must match the gaps between retained lines.
 - Omitted-range summaries must be clearly separated from original source-code content.

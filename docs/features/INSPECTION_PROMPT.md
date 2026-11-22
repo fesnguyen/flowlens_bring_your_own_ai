@@ -42,14 +42,16 @@ FlowLens helps a developer hand a Jira issue to **their own external AI** for so
 
 ### A. General inspection instruction
 
-One versioned, issue-independent instruction tells the external AI **how to investigate**:
+A non-removable built-in instruction provides the minimum investigation and output contract. Users may add, import, select and remove optional instruction presets; they cannot remove the built-in foundation. This is a **planned instruction-management feature**, not a description of the current UI. The built-in and selected custom instructions must not contradict the authoritative output schema. The existing nine-section instruction remains the current implemented default until explicitly revised.
+
+The current versioned, issue-independent instruction tells the external AI **how to investigate**:
 
 - Understand requirements, symptoms, expected behavior, assumptions, and open questions.
 - Trace relevant entry points through outcomes, including calls, conditions, errors, retries, and async work.
 - Let the Jira issue determine the scope. Prefer one flow with branches when they share context; split only genuinely independent execution paths.
-- Capture exact original source evidence with file, symbol, line numbers, and unchanged source comments; never invent code or execution links.
+- Identify all relevant components and execution relationships that can be established; distinguish uncertainty from verified behavior. In the planned flexible contract, source references and code are optional. Current v1 still requires them for source-code nodes.
 - Represent original lines as `[lineNumber, content]` and noncontiguous omissions as explicit ranges with AI-written summaries.
-- Attach evidence-backed findings to nodes, distinguish uncertainty from verified behavior, and provide suggestions only when justified.
+- Attach explanations, findings and optional relative-impact hypotheses to relevant nodes, distinguish uncertainty from verified behavior, and provide suggestions only when justified.
 - Use `original` flows for existing behavior; use optional `suggestion` flows only for meaningful proposed execution changes.
 - Deliver a **downloadable** `flowlens-analysis.json`, conforming to the supplied schema, with a brief summary and validation limitations.
 - **Investigate and document only; do not modify source code.**

@@ -1,11 +1,8 @@
 # FlowLens — Bring Your Own AI
 
-FlowLens helps developers understand source-code execution flows related to Jira
-tickets. Built with Atlassian Forge for Jira Cloud and Codegeist 2026.
+FlowLens helps developers investigate issues, understand relevant system behavior, and assess the potential impact of changes using their own AI. Jira Cloud is the initial integration, built with Atlassian Forge for Codegeist 2026.
 
-This repository currently contains infrastructure only: a Custom UI issue panel,
-Jira context access through Forge Bridge, and a minimal resolver connection check.
-Prompt generation, AI integration, JSON import/export, and diagrams are not implemented.
+The product direction is documented in [Project Overview](docs/PROJECT_OVERVIEW.md), [Flow Visualization](docs/features/FLOW_VISUALIZATION.md), and [Analysis Schema](docs/features/ANALYSIS_SCHEMA.md). The intended flexible node model and relative-impact view are planned; the bundled v1 JSON Schema still has stricter source-evidence requirements. Source references are optional in the target design and direct source navigation is deferred. See the feature and implementation documents for status and compatibility.
 
 ## Environment
 

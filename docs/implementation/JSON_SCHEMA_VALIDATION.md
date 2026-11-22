@@ -9,12 +9,16 @@
 
 Top level: `version: 1`, `issue`, `analysis`, and nonempty flat `flows[]`. A flow includes `id`, `name`, `type`, `description`, `entryNodeIds`, `nodes`, `edges`, optional `conclusion` and `basedOnFlowId`. Reconcile exact required/optional fields against `ANALYSIS_SCHEMA.md` before freezing v1.
 
+## Planned contract migration (not implemented)
+
+The new product direction requires optional source references, flexible ordered node content, and optional relative-impact relationships. The currently bundled v1 schema is still authoritative for current Copy/Package and future v1 import validation. Do **not** treat the planned flexible shape as accepted v1 JSON. Implement it through an explicit versioned schema change with updated prompt sections, validation, fixtures, migration/compatibility behavior and documentation. Preserve referential integrity and untrusted-content handling.
+
 ## Structural constraints
 
 - Explicit `required` fields and types; enum values for flow type and conclusion level.
 - Code line tuples are **exactly** `[positiveInteger, string]` with no extra elements.
 - A code block contains **either** nonempty `lines` **or** an `omitted` range (`startLine`, `endLine`, `summary`).
-- Source-code nodes require source references and code; structural markers may omit them.
+- **Current v1 only:** source-code nodes require source references and code; structural markers may omit them. This requirement is slated for removal in the next versioned contract.
 - Findings have stable IDs, explanations, evidence and supported severity/status values when defined.
 - Proposed code must be distinguishable from original source evidence.
 - Reject unknown structural properties by default where forward compatibility is not explicitly designed.
