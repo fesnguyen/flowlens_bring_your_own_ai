@@ -3,7 +3,7 @@
 **Authority:** Level 3 — Feature Behavior  
 **Parent:** `docs/PROJECT_OVERVIEW.md`  
 **Related:** `ANALYSIS_SCHEMA.md`  
-**Status:** Proposed Design
+**Status:** Graph, node details, relative impact and in-panel flow management implemented.
 
 ## 1. Purpose
 
@@ -34,7 +34,7 @@ Users must be able to:
 
 - Select and view a flow.
 - Import additional flows.
-- Delete an individual flow.
+- Remove an individual imported flow from the current panel.
 - Distinguish original flows from suggested flows.
 - Review the investigation conclusion when available.
 
@@ -82,11 +82,11 @@ Use left-to-right execution order where supported. Number steps when an order is
 
 ### 4.1 Relative impact
 
-A node may include an optional **Relative Impact** section for a proposed change. Each impact identifies a related node, relationship type, potential consequence, reason and what to verify. Highlight impacted nodes and provide navigation within the diagram. The affected set is not restricted to outgoing execution edges: callers, shared configuration and state can matter too.
+A node may include an optional **Relative Impact** section for a proposed change. Each impact identifies a related node, relationship type, potential consequence, reason and what to verify. Highlighted targets use a dashed outline and a Potential impact label. Select any target directly in the diagram to inspect its details. The affected set is not restricted to outgoing execution edges: callers, shared configuration and state can matter too.
 
 Label AI-estimated impact as unverified unless there is separate evidence. Do not imply that selecting a node performs a real-time code analysis; FlowLens displays imported information.
 
-### 4.2 Source references (deferred)
+### 4.2 Optional source references
 
 File paths, function names, line ranges and code snippets may appear as optional content. They are **not required** to display or import a node. Direct source navigation, line highlighting and a dedicated mandatory code viewer are out of scope for this direction.
 
@@ -112,9 +112,7 @@ A finding may include:
 
 Findings must be visually distinguishable from verified source-code behavior.
 
-A small suggested fix should be displayed directly within the relevant original node.
-
-For example, changing a validation limit from 25 to 30 characters does not require generating another workflow.
+A localized recommendation can be described in a content block on the relevant node.
 
 ## 7. Original and Suggested Flows
 
@@ -163,7 +161,7 @@ Interaction details may evolve without changing the underlying analysis contract
 
 Larger, richer nodes make diagrams wider. Support horizontal navigation, zoom, fit-to-view, and progressive disclosure. Keep previews concise and prevent code/finding content from overwhelming branch labels.
 
-Diagram positions are derived by the UI; analysis JSON does not need coordinates. Choose graph/layout and syntax-highlighting libraries during implementation based on representative inspection fixtures, not mockup appearance alone.
+Diagram positions are derived by the UI; analysis JSON does not need coordinates. React Flow renders the graph and Dagre calculates the layout using the measured card sizes.
 
 ### 10.1 Representative UI Test Fixture
 

@@ -28,14 +28,11 @@ const sections = [
   outputRulesContext,
 ] as const;
 
-/**
- * Build the reusable inspection instruction.
- *
- * This content is shared by the clipboard and ZIP export.
- * Keep its original headings and wording unchanged.
- */
-export function buildGeneralContext(): string {
-  return sections.join('\n\n');
+/** Build the foundation first and append the selected preferences for either export action. */
+export function buildGeneralContext(customInstruction?: string): string {
+  const preferences = customInstruction?.trim();
+  if (!preferences) return sections.join('\n\n');
+  return [...sections, '# Custom Investigation Preferences', preferences].join('\n\n');
 }
 
 /**
@@ -60,6 +57,7 @@ export type InspectionMaterials = {
 export function buildInspectionMaterials(
   issue: InspectionIssueContext,
   schemaText: string,
+  customInstruction?: string,
 ): InspectionMaterials {
   let parsed: unknown;
 
@@ -75,7 +73,7 @@ export function buildInspectionMaterials(
 
   return {
     issueKey: issue.key,
-    instruction: buildGeneralContext(),
+    instruction: buildGeneralContext(customInstruction),
     issue: renderIssueContext(issue),
     schema: schemaText,
   };

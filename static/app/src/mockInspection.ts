@@ -1,8 +1,8 @@
-import type { CodeBlock, Inspection, InspectionNode } from './inspection';
+import type { CodeBlock, LegacyInspection, LegacyNode } from './inspection';
 
 const paymentFile = 'payment_service.py';
 
-const capture: InspectionNode = {
+const capture: LegacyNode = {
   id: 'capture',
   kind: 'operation',
   title: 'Capture Payment',
@@ -39,7 +39,7 @@ const capture: InspectionNode = {
     {
       id: 'F-001',
       title: 'Payment capture timeout risk',
-      status: 'Suspected',
+      status: 'suspected',
       explanation: 'The gateway response may exceed the configured timeout.',
       evidence: [{ file: paymentFile, startLine: 35, endLine: 64 }],
       suggestion: 'Handle delayed gateway responses and evaluate asynchronous capture.',
@@ -47,7 +47,7 @@ const capture: InspectionNode = {
   ],
 };
 
-const retry: InspectionNode = {
+const retry: LegacyNode = {
   id: 'retry',
   kind: 'retry',
   title: 'Retry Payment',
@@ -65,16 +65,16 @@ const retry: InspectionNode = {
   }],
 };
 
-const success: InspectionNode = {
+const success: LegacyNode = {
   id: 'success', kind: 'end', title: 'End Success', description: 'The paid order is available.',
 };
 
-const failure: InspectionNode = {
+const failure: LegacyNode = {
   id: 'failure', kind: 'error', title: 'End Failure',
   description: 'Checkout ends after retries are exhausted or the gateway declines the payment.',
 };
 
-const createOrder: InspectionNode = {
+const createOrder: LegacyNode = {
   id: 'create-order',
   kind: 'operation',
   title: 'Create Order',
@@ -90,14 +90,14 @@ const createOrder: InspectionNode = {
   }],
 };
 
-const paymentSuccessful: InspectionNode = {
+const paymentSuccessful: LegacyNode = {
   id: 'decision', kind: 'decision', title: 'Payment successful?',
   description: 'Continue only when the capture result reports success.',
   source: { file: 'checkout.py', symbol: 'CheckoutService.process', startLine: 88, endLine: 89 },
   code: [{ lines: [[88, 'if result.success:'], [89, '    break']] }],
 };
 
-const verifyWebhook: InspectionNode = {
+const verifyWebhook: LegacyNode = {
   id: 'verify', kind: 'operation', title: 'Verify Event',
   description: 'Authenticate the gateway signature and parse the event payload.',
   source: { file: 'webhooks.py', symbol: 'PaymentWebhook.verify', startLine: 22, endLine: 25 },
@@ -111,7 +111,7 @@ const verifyWebhook: InspectionNode = {
   }],
 };
 
-const webhookUpdate: InspectionNode = {
+const webhookUpdate: LegacyNode = {
   id: 'update', kind: 'operation', title: 'Update Order Status',
   description: 'Find the order by payment ID and apply the gateway status.',
   source: { file: 'webhooks.py', symbol: 'PaymentWebhook.apply', startLine: 42, endLine: 46 },
@@ -127,7 +127,7 @@ const webhookUpdate: InspectionNode = {
   findings: [{
     id: 'F-002',
     title: 'Early webhook can be dropped',
-    status: 'Suspected',
+    status: 'suspected',
     explanation: 'A successful webhook is acknowledged even if the order has not been written yet.',
     evidence: [{ file: 'webhooks.py', startLine: 42, endLine: 44 }],
     suggestion: 'Store the event for replay when the order becomes available.',
@@ -143,7 +143,7 @@ const proposedCode: CodeBlock[] = [{
 }];
 
 // Fictional inspection data, kept in the same shape as an imported analysis.
-export const mockInspection: Inspection = {
+export const mockInspection: LegacyInspection = {
   version: 1,
   issue: { key: 'SHOP-142' },
   analysis: {

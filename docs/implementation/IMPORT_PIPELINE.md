@@ -1,9 +1,15 @@
 # Analysis Import Pipeline — Implementation Specification
 
-**Status:** Proposed.  
+**Status:** Browser import and additive in-panel flow management implemented. Forge-backed flow storage is planned.
 **Parents:** `../features/ANALYSIS_SCHEMA.md`, `DATA_STORAGE.md`, `JSON_SCHEMA_VALIDATION.md`
 
-## Scope and neighboring operations
+## Implemented path
+
+The file picker accepts analysis JSON up to 5 MiB. The browser validates the version, schema, issue key when available, and references. It adapts v1 or v2 to the shared viewer types and appends all validated flows in one state update. A local list key distinguishes repeated imports while the analysis keeps its original IDs, per-flow references and provenance. Name collisions use suffixes starting at `(0)`. Selecting or removing a flow affects it independently. Unsuccessful imports leave the current flows intact.
+
+The flow collection lives in the open panel. Reloading clears it. The following sections describe the future Forge-backed path.
+
+## Planned scope and neighboring operations
 
 This pipeline handles **Import JSON**: an external AI-produced `flowlens-analysis.json` becomes saved flows. It does **not** build the Copy Inspection Prompt or Export Inspection Package; those actions use `INSPECTION_TEMPLATE.md`. A separate future **Export Flows as JSON** operation reads saved flows, reconstructs a schema-compatible analysis document (including issue and analysis provenance), maps persistent IDs to export IDs, validates it, and downloads JSON. It does not produce the inspection ZIP or include attachments.
 
