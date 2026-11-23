@@ -138,7 +138,7 @@ export function buildInspectionPackage(
   const metadata = {
     version: 1,
     issueKey: materials.issueKey,
-    instructionVersion: 1,
+    instructionVersion: 2,
     schemaId: (JSON.parse(materials.schema) as { $id?: string }).$id,
     createdAt: new Date().toISOString(),
     attachmentListingError,

@@ -1,7 +1,7 @@
 
-import { AlertTriangle, Braces, FileCode2, ListOrdered, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { CodeViewer } from './CodeViewer';
-import type { Finding, InspectionNode } from './inspection';
+import type { ContentBlock, Finding, Flow, InspectionNode, SourceReference } from '../../../shared/inspection';
 
 /**
  * FindingDetails — Individual finding card inside the Code Inspector.
@@ -19,7 +19,7 @@ function FindingDetails({ finding }: { finding: Finding }) {
       {/* FINDING HEADER: Finding ID and current status */}
       <div className="finding-heading">
         <span className="finding-id">{finding.id}</span>
-        <span className="finding-status">{finding.status}</span>
+        <span className="finding-status">AI assessment: {finding.status}</span>
       </div>
 
       {/* FINDING DESCRIPTION: Title and explanation */}
@@ -47,113 +47,81 @@ function FindingDetails({ finding }: { finding: Finding }) {
   );
 }
 
-/**
- * NodeDetails — Right-side Code Inspector panel content.
- *
- * Receives the selected node from App and displays:
- * - Node title and description.
- * - Source file, function/symbol, and line numbers.
- * - Source code through CodeViewer.
- * - Inspection findings through FindingDetails.
- *
- * If no node is selected, displays an instructional empty state.
- *
- * Props:
- * - node: Currently selected execution node (optional).
- * - proposed: Whether the node belongs to a suggested flow.
- * - onClose: Callback to clear the selection and close the inspector.
- */
-export function NodeDetails({ node, proposed, onClose }: {
-  node?: InspectionNode;
-  proposed: boolean;
-  onClose: () => void;
-}) {
+function SourceDetails({ source }: { source: SourceReference }) {
+  return (
+    <dl className="source-metadata">
+      <div><dt>File</dt><dd><code>{source.file}</code></dd></div>
+      {source.symbol && <div><dt>Symbol</dt><dd><code>{source.symbol}</code></dd></div>}
+      {source.startLine !== undefined && (
+        <div><dt>Lines</dt><dd>{source.startLine}{source.endLine !== undefined && `–${source.endLine}`}</dd></div>
+      )}
+    </dl>
+  );
+}
+
+function BlockDetails({ block }: { block: ContentBlock }) {
+  return (
+    <details className="node-content-block" open={block.type.toLowerCase() !== 'code'}>
+      <summary>{block.title ?? block.type}</summary>
+      {block.status && <p className="finding-status">AI assessment: {block.status}</p>}
+      {block.type.toLowerCase() === 'code'
+        ? <pre tabIndex={0}><code>{block.text}</code></pre>
+        : <p className="block-text">{block.text}</p>}
+      {block.source && <SourceDetails source={block.source} />}
+    </details>
+  );
+}
+
+/** Show ordered investigation content and separate AI change assessments for the selected node. */
+export function NodeDetails({ node, flow, onClose }: { node?: InspectionNode; flow?: Flow; onClose: () => void }) {
   return (
     <>
-      {/* ===== INSPECTOR HEADER: Panel title and close button ===== */}
       <div className="inspector-header">
         <h2 id="inspector-heading" tabIndex={-1}>Node Details</h2>
-
-        {/* CLOSE BUTTON: Calls App.closeDetails through onClose */}
-        {node && (
-          <button
-            type="button"
-            className="icon-button"
-            onClick={onClose}
-            aria-label="Close node details"
-          >
-            <X size={17} aria-hidden="true" />
-          </button>
-        )}
+        {node && <button type="button" className="icon-button" onClick={onClose} aria-label="Close node details">
+          <X size={17} aria-hidden="true" />
+        </button>}
       </div>
 
-      {/* ===== INSPECTOR BODY: Selected node information ===== */}
-      {node ? (
+      {node && flow ? (
         <div className="inspector-content" key={node.id}>
-
-          {/* NODE TYPE: Identifies a proposed execution step */}
-          {proposed && <span className="type-label suggestion">Proposed</span>}
-
-          {/* NODE SUMMARY: Title and description of the selected step */}
+          {flow.type === 'suggestion' && <span className="type-label suggestion">Proposed</span>}
           <h3 className="inspector-title">{node.title}</h3>
-          <p className="inspector-description">{node.description}</p>
+          {node.subheader && <p className="inspector-description">{node.subheader}</p>}
+          {node.source && <SourceDetails source={node.source} />}
 
-          {/* SOURCE METADATA: File, function/symbol, and line range */}
-          {node.source && (
-            <dl className="source-metadata">
-              {/* SOURCE FILE: Path to the implementation */}
-              <div>
-                <dt>
-                  <FileCode2 size={15} />
-                  <span className="sr-only">File</span>
-                </dt>
-                <dd><code>{node.source.file}</code></dd>
-              </div>
-
-              {/* SYMBOL: Function, method, or other source symbol */}
-              <div>
-                <dt>
-                  <Braces size={15} />
-                  <span className="sr-only">Symbol</span>
-                </dt>
-                <dd><code>{node.source.symbol}</code></dd>
-              </div>
-
-              {/* LINE RANGE: Location of the implementation in the file */}
-              <div>
-                <dt>
-                  <ListOrdered size={15} />
-                  <span className="sr-only">Source</span>
-                </dt>
-                <dd>Lines {node.source.startLine}–{node.source.endLine}</dd>
-              </div>
-            </dl>
-          )}
-
-          {/* CODE VIEWER: Display source snippets associated with the node */}
-          {node.code && (
-            <CodeViewer blocks={node.code} proposed={proposed} />
-          )}
-
-          {/* FINDINGS SECTION: Issues discovered during inspection */}
-          {Boolean(node.findings?.length) && (
-            <section className="inspection-section" aria-label="Findings">
-              <h3>
-                <AlertTriangle size={15} aria-hidden="true" /> Findings
-              </h3>
-
-              {/* FINDING CARDS: Render one card for each inspection finding */}
-              {node.findings?.map((finding) => (
-                <FindingDetails key={finding.id} finding={finding} />
+          {/* Keep change assessments close to the title so they are easy to find. */}
+          {Boolean(node.impacts?.length) && (
+            <section className="node-impacts" aria-label="Relative impact">
+              <h3>Relative impact</h3>
+              <p>Potential effects of changing this node, assessed by the AI.</p>
+              {node.impacts?.map((impact, index) => (
+                <details className="node-content-block" key={index} open>
+                  <summary>{flow.nodes.find(target => target.id === impact.nodeId)?.title ?? impact.nodeId}</summary>
+                  <dl className="impact-details">
+                    <div><dt>Relationship</dt><dd>{impact.relationship}</dd></div>
+                    <div><dt>Potential consequence</dt><dd>{impact.consequence}</dd></div>
+                    <div><dt>Why</dt><dd>{impact.reason}</dd></div>
+                    <div><dt>AI assessment</dt><dd>{impact.status ?? 'Unspecified'}</dd></div>
+                    {impact.evidence && <div><dt>Evidence</dt><dd>{impact.evidence}</dd></div>}
+                    {impact.verification && <div><dt>How to verify</dt><dd>{impact.verification}</dd></div>}
+                  </dl>
+                </details>
               ))}
             </section>
           )}
+
+          {/* V1 evidence keeps its numbered code viewer and structured findings. */}
+          {node.content.map((item, index) => {
+            if (item.format === 'legacyCode') {
+              return <CodeViewer key={index} blocks={item.blocks} proposed={flow.type === 'suggestion'} />;
+            }
+            if (item.format === 'legacyFinding') return <FindingDetails key={index} finding={item.finding} />;
+            return <BlockDetails key={index} block={item.block} />;
+          })}
         </div>
       ) : (
-        /* EMPTY STATE: Displayed when no execution node is selected */
-        <p className="inspector-empty">
-          Select a node to inspect its source and findings.
-        </p>
+        <p className="inspector-empty">Select a node to inspect its details and potential impact.</p>
       )}
     </>
   );

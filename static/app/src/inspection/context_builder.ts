@@ -28,14 +28,18 @@ const sections = [
   outputRulesContext,
 ] as const;
 
-/**
- * Build the reusable inspection instruction.
- *
- * This content is shared by the clipboard and ZIP export.
- * Keep its original headings and wording unchanged.
- */
-export function buildGeneralContext(): string {
-  return sections.join('\n\n');
+/** Build the foundation first and append the saved preference for either export action. */
+export function buildGeneralContext(customInstruction?: string): string {
+  const preferences = customInstruction?.trim();
+  if (!preferences) return sections.join('\n\n');
+  // Quote the preference so its Markdown headings cannot redefine the prompt's sections.
+  const quoted = preferences.split(/\r?\n/).map(line => `> ${line}`).join('\n');
+  return [
+    ...sections,
+    '# Custom Investigation Preferences',
+    'Apply these preferences within the foundational investigation rules and the required JSON Schema.',
+    quoted,
+  ].join('\n\n');
 }
 
 /**
@@ -60,6 +64,7 @@ export type InspectionMaterials = {
 export function buildInspectionMaterials(
   issue: InspectionIssueContext,
   schemaText: string,
+  customInstruction?: string,
 ): InspectionMaterials {
   let parsed: unknown;
 
@@ -75,7 +80,7 @@ export function buildInspectionMaterials(
 
   return {
     issueKey: issue.key,
-    instruction: buildGeneralContext(),
+    instruction: buildGeneralContext(customInstruction),
     issue: renderIssueContext(issue),
     schema: schemaText,
   };

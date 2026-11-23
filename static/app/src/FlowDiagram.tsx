@@ -10,7 +10,8 @@ import {
 } from 'lucide-react';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CodePreview } from './CodeViewer';
-import type { Flow, InspectionNode } from './inspection';
+import type { Flow, InspectionNode, LegacyNode } from '../../../shared/inspection';
+import { impactTargets } from './inspection/flow_collection';
 
 /**
  * GraphNode — React Flow's representation of an inspection step.
@@ -23,7 +24,7 @@ import type { Flow, InspectionNode } from './inspection';
  * 'execution' identifies the custom renderer registered in nodeTypes.
  */
 type GraphNode = Node<
-  { step: InspectionNode; proposed: boolean; onSelect: (id: string, trigger: HTMLButtonElement) => void },
+  { step: InspectionNode; proposed: boolean; impacted?: boolean; onSelect: (id: string, trigger: HTMLButtonElement) => void },
   'execution'
 >;
 
@@ -37,81 +38,58 @@ const nodeIcons = {
   error: AlertCircle,
 };
 
-/**
- * ExecutionNode — Individual execution card inside the graph.
- *
- * React Flow renders this component for every node of type 'execution'.
- *
- * UI:
- * - Icon and execution step title.
- * - Finding count, when applicable.
- * - Source file, function, and line range.
- * - Description and optional code preview.
- *
- * Clicking the card notifies App through onSelect.
- */
+/** Render the responsibility and signals on the card, with full blocks in Node Details. */
 function ExecutionNode({ data, selected }: NodeProps<GraphNode>) {
-  const { step, proposed, onSelect } = data;
-  const Icon = nodeIcons[step.kind];
-  const findingCount = step.findings?.length ?? 0;
+  const { step, proposed, impacted, onSelect } = data;
+  const knownKind = step.kind && Object.hasOwn(nodeIcons, step.kind) ? step.kind as LegacyNode['kind'] : undefined;
+  const Icon = nodeIcons[knownKind ?? 'operation'];
+  const warningCount = step.content.filter(item =>
+    item.format === 'legacyFinding' ||
+    (item.format === 'content' && ['warning', 'diagnostic', 'finding'].includes(item.block.type.toLowerCase())),
+  ).length;
   const range = step.source;
-
-  // Start/end/error cards can be smaller when no source or code is attached.
-  const compact = ['start', 'end', 'error'].includes(step.kind) && !range && !step.code;
+  const legacyCode = step.content.find(item => item.format === 'legacyCode');
+  const preview = step.content.find(item => item.format === 'content');
 
   return (
     <>
-      {/* CONNECTION POINTS: Incoming edges from previous or returning steps */}
       <Handle type="target" position={Position.Left} id="in" />
       <Handle type="target" position={Position.Bottom} id="return" />
 
-      {/* EXECUTION CARD: Click to open this node in the Code Inspector */}
+      {/* Selecting the card opens full details and marks AI-declared impact targets. */}
       <button
-        className={`execution-node nodrag ${step.kind} ${compact ? 'compact-node' : ''} ${proposed ? 'proposed-node' : ''}`}
+        className={`execution-node nodrag ${knownKind ?? ''} ${proposed ? 'proposed-node' : ''} ${impacted ? 'impact-target' : ''}`}
         type="button"
         aria-pressed={selected}
         onClick={(event) => onSelect(step.id, event.currentTarget)}
       >
-        {/* CARD HEADER: Execution icon, title, and finding count */}
         <span className="node-heading">
           <span className="node-icon"><Icon size={16} aria-hidden="true" /></span>
           <strong>{step.title}</strong>
-
-          {/* FINDING BADGE: Number of issues identified in this step */}
-          {findingCount > 0 && (
-            <span className="finding-count">
-              {findingCount} {findingCount === 1 ? 'finding' : 'findings'}
-            </span>
-          )}
         </span>
-
-        {/* CARD BODY: Hidden for compact start/end/error nodes */}
-        {!compact && (
-          <>
-            {/* PROPOSED BADGE: Identifies steps in a suggested flow */}
-            {proposed && <span className="type-label suggestion">Proposed</span>}
-
-            {/* SOURCE LOCATION: File, function/symbol, and line numbers */}
-            {range && step.kind !== 'decision' && (
-              <span className="node-source">
-                <span title={range.file}>{range.file}</span>
-                <span title={range.symbol}>{range.symbol}</span>
-                <span className="source-range">
-                  Lines {range.startLine}–{range.endLine}
-                </span>
-              </span>
-            )}
-
-            {/* DESCRIPTION: Explains what happens during this execution step */}
-            <span className="node-description">{step.description}</span>
-
-            {/* CODE PREVIEW: Shows associated source snippets when available */}
-            {step.code && <CodePreview blocks={step.code} />}
-          </>
+        {(step.sequence !== undefined || step.kind) && (
+          <span className="node-category">
+            {step.sequence !== undefined && <span>Step {step.sequence}</span>}
+            {step.kind && <span>{step.kind}</span>}
+          </span>
         )}
+        {step.subheader && <span className="node-description">{step.subheader}</span>}
+        {range && (
+          <span className="node-source">
+            <span title={range.file}>{range.file}</span>
+            {range.symbol && <span title={range.symbol}>{range.symbol}</span>}
+          </span>
+        )}
+        {legacyCode && <CodePreview blocks={legacyCode.blocks} />}
+        {preview && preview.block.type.toLowerCase() !== 'code' && (
+          <span className="node-description">{preview.block.title ?? preview.block.text}</span>
+        )}
+        {warningCount > 0 && (
+          <span className="finding-count">{warningCount} investigation {warningCount === 1 ? 'note' : 'notes'}</span>
+        )}
+        {impacted && <span className="impact-label">Potential impact</span>}
       </button>
 
-      {/* CONNECTION POINTS: Outgoing, conditional, and retry edges */}
       <Handle type="source" position={Position.Right} id="out" />
       <Handle type="source" position={Position.Bottom} id="branch" />
       <Handle type="source" position={Position.Bottom} id="loop" />
@@ -315,6 +293,13 @@ function Graph({ flow, selectedId, onSelect }: {
 
   // Rebuild edges only when the selected flow changes.
   const edges = useMemo(() => graphEdges(flow), [flow]);
+  const impacted = useMemo(() => impactTargets(flow, selectedId), [flow, selectedId]);
+  // Selection changes styling only. Keep the measured layout and viewport in place.
+  const visibleNodes = useMemo(() => nodes.map(node => ({
+    ...node,
+    selected: node.id === selectedId,
+    data: { ...node.data, impacted: impacted.has(node.id) },
+  })), [nodes, selectedId, impacted]);
 
   /**
    * INITIAL GRAPH LAYOUT
@@ -376,10 +361,7 @@ function Graph({ flow, selectedId, onSelect }: {
       {/* ===== GRAPH CANVAS: Interactive execution diagram ===== */}
       <ReactFlow
         aria-label={`${flow.name} execution graph`}
-        nodes={nodes.map((node) => ({
-          ...node,
-          selected: node.id === selectedId,
-        }))}
+        nodes={visibleNodes}
         edges={edges}
         onNodesChange={onNodesChange}
         nodeTypes={nodeTypes}

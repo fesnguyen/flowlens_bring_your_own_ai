@@ -93,7 +93,7 @@ export function useInspectionActions() {
    *
    * @param action - 'copy' or 'export'.
    */
-  async function run(action: InspectionAction) {
+  async function run(action: InspectionAction, customInstruction?: string) {
     // STEP 1: Ignore additional clicks while an action is already running.
     if (running.current) return;
 
@@ -143,7 +143,7 @@ export function useInspectionActions() {
         return {
           invoke,
           result,
-          materials: buildInspectionMaterials(result.issue, schemaText),
+          materials: buildInspectionMaterials(result.issue, schemaText, customInstruction),
         };
       });
 

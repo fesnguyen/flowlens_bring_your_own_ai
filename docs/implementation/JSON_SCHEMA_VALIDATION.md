@@ -1,40 +1,14 @@
 # JSON Schema and Validation — Implementation Specification
 
-**Status:** Schema bundled for Copy and Package. Import validation is planned.
-**Parent:** `../features/ANALYSIS_SCHEMA.md`
+**Status:** v1 and v2 resolver validation implemented.
+**Parent:** [Analysis Schema](../features/ANALYSIS_SCHEMA.md)
 
-## Contract
+New inspection requests ship `shared/flowlens.schema.json` (v2). `shared/flowlens.v1.schema.json` preserves the original v1 contract. Each version has its own schema ID. The import validator supports the subset of Draft 2020-12 keywords used by the bundled schemas. The same v2 asset is bundled for validation and shipped verbatim in Copy and Package.
 
-`shared/flowlens.schema.json` defines the v1 contract in JSON Schema Draft 2020-12. It is the **only authoritative structural contract** for external AI-generated analysis files, import validation, inspection Copy/Package delivery, and later saved-flow JSON export. Versioned TypeScript context sections assemble the general inspection instruction independently of the schema. Documentation explains the contract but must not become a divergent schema.
+The panel bounds the file and serialized request at 450,000 bytes. The resolver checks the serialized import size again before parsing. `parseInspection` parses JSON, dispatches on its explicit version, validates the selected schema, and checks the Jira issue key obtained by the resolver from an authorized Jira read. It then verifies flow and node ID uniqueness, entry nodes, execution endpoints, conclusion evidence references, original-flow links, and v2 impact targets. When a v2 reference has an ending line, it needs a starting line at or before it.
 
-Top level: `version: 1`, `issue`, `analysis`, and nonempty flat `flows[]`. A flow includes `id`, `name`, `type`, `description`, `entryNodeIds`, `nodes`, `edges`, optional `conclusion` and `basedOnFlowId`. Reconcile exact required/optional fields against `ANALYSIS_SCHEMA.md` before freezing v1.
+An omitted optional field is accepted. Malformed optional content returns a focused error, such as `$.flows[0].nodes[2].content[0].text is required`. The complete analysis is rejected on an error and existing flows remain available. All content is rendered as inert text. Imported evidence still requires developer verification.
 
-## Structural constraints
+`toInspection` adapts validated files to the viewer. It wraps v2 content in its display model and converts v1 descriptions to subheaders while preserving numbered code, omission summaries, findings, source information, and existing graph identifiers. This is an in-memory adapter. It does not rewrite the original analysis file.
 
-- Explicit `required` fields and types; enum values for flow type and conclusion level.
-- Code line tuples are **exactly** `[positiveInteger, string]` with no extra elements.
-- A code block contains **either** nonempty `lines` **or** an `omitted` range (`startLine`, `endLine`, `summary`).
-- Source-code nodes require source references and code; structural markers may omit them.
-- Findings have stable IDs, explanations, evidence and supported severity/status values when defined.
-- Proposed code must be distinguishable from original source evidence.
-- Reject unknown structural properties by default where forward compatibility is not explicitly designed.
-
-## Semantic validation (beyond JSON Schema)
-
-- Unique flow IDs within file; unique node IDs within each flow.
-- Every entry node and edge endpoint exists in its flow.
-- `basedOnFlowId` resolves to an appropriate original flow when present.
-- Original source line numbers strictly increase; omitted ranges are positive, inclusive, ordered, nonoverlapping, and match gaps between retained segments.
-- Source ranges cover referenced snippets consistently.
-- Jira issue key must match the current issue or import must stop with explicit user-facing mismatch feedback.
-- Enforce bounded file size, node count, string lengths, and nesting depth.
-
-**Important limitation:** structural validation cannot prove that imported code matches a repository. FlowLens has no repository integration; the AI and developer must verify factual accuracy. Never label schema-valid content as source-verified.
-
-## Pipeline and errors
-
-Parse JSON → check version/issue → JSON Schema validation → semantic validation → import planning. Return structured errors such as `{path, code, message}`, with paths like `flows[0].nodes[2].source.file`. Show a copyable report. Invalid analysis is rejected without partial persistence.
-
-## Implementation and tests
-
-Use a maintained TypeScript JSON Schema validator (candidate: Ajv, with appropriate draft support). Keep one schema asset importable by the Forge backend and reusable without modification in the clipboard payload, as a separate ZIP file, and for saved-flow JSON export. Exported saved flows must validate against this schema after persistent IDs are mapped to import-compatible IDs. Fixtures: minimal valid flow, branching, omitted code, suggested flow, malformed tuples, invalid enum, missing reference, duplicate IDs, overlapping ranges, unsupported version, wrong Jira issue.
+The resolver validates before opening any write transaction. See [Data Storage](DATA_STORAGE.md) for additional persistence limits.

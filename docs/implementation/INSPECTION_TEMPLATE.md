@@ -1,12 +1,12 @@
 # Inspection Template — Implementation Specification
 
-**Status:** Copy and Package implemented
+**Status:** Copy, Package and private custom instruction implemented
 **Parent:** `../features/INSPECTION_PROMPT.md`
 
 ## 1. Implementation overview
 
 ```text
-                     versioned instruction sections
+                     foundation + saved preference
                                   │
               ┌───────────────────┼──────────────────┐
               │                   │                  │
@@ -24,15 +24,15 @@
                  attachments/
 ```
 
-**Critical invariant:** The bytes/text of the general instruction are **identical** for Copy and Package, independent of the Jira issue. Do not interpolate issue fields or schema into the stored instruction asset. Compose separate sections only at delivery time.
+Copy and Package share one assembled instruction with the private preference loaded from Forge. The builder quotes custom text under the immutable foundation. Copy nests its headings for the clipboard document. Package preserves the assembled Markdown as a separate file. Issue fields and schema are separate inputs.
 
 ## 2. Source assets and ownership
 
 | Asset | Source | Rule |
 |---|---|---|
-| General instruction | Nine versioned TypeScript sections in `static/app/src/inspection/context/` | Assembled in a fixed order by `context_builder.ts`; no issue-specific placeholders |
+| General instruction | Nine versioned TypeScript sections in `static/app/src/inspection/context/` | Assembled in a fixed order by `context_builder.ts`, followed by optional custom preferences |
 | Jira issue content | Forge resolver fetches permitted Jira issue fields | Normalize to a separate Markdown document |
-| JSON Schema | One versioned `flowlens.schema.json` | Import and both output actions use the exact same schema |
+| JSON Schema | Versioned `flowlens.schema.json` | Both outputs deliver v2. The importer validates against the schema for the version in the file. |
 | Attachments | Authorized Jira attachment metadata and bytes | Package only; never clipboard |
 | Manifest | Generated package metadata | Track attachments included/excluded/failed and reasons |
 
@@ -63,9 +63,9 @@ Treat all issue text as untrusted data. Delimit it clearly from the instruction 
 The assembly functions use the same instruction and schema for both actions.
 
 ```ts
-buildGeneralContext(): string
+buildGeneralContext(customInstruction?: string): string
 renderIssueContext(context: InspectionIssueContext): string
-buildInspectionMaterials(issue: InspectionIssueContext, schemaText: string): InspectionMaterials
+buildInspectionMaterials(issue: InspectionIssueContext, schemaText: string, customInstruction?: string): InspectionMaterials
 buildCopyContext(materials: InspectionMaterials): string
 buildInspectionPackage(materials, attachments, attachmentListingError?): { archive: Blob; skipped: number }
 ```
@@ -78,16 +78,16 @@ Do not independently reconstruct instruction text in these functions. Prefer a s
 # FlowLens Inspection Request
 
 ## General Inspection Instruction
-<exact unchanged instruction.md>
+<foundation and custom preferences with nested headings>
 
 ## Jira Issue Context
 <rendered issue.md>
 
 ## Required Output JSON Schema
-    <complete flowlens.schema.json as an indented code block>
+<complete flowlens.schema.json in a fenced code block>
 ```
 
-The outer section labels are assembly formatting, **not changes to the instruction itself**. The issue values and schema are indented Markdown code blocks.
+Copy presents Jira field values as indented code blocks and encloses the schema in a JSON fence.
 
 ## 5. Copy button — execution flow
 
@@ -144,7 +144,7 @@ The limits are 3 MiB per attachment, 50 attachment download attempts, and 25 MiB
 - Clipboard blocked: selectable text fallback.
 - Attachment failures: continue only with explicit manifest warnings; no silent omission.
 - Schema unavailable: fail both actions rather than emit an incomplete contract.
-- Snapshot the exact instruction section in Copy and ZIP and assert byte-for-byte equality.
+- Check that Copy and ZIP share the same assembled instruction and account for heading nesting in Copy.
 - Test complete/missing fields, ADF lists/links/code, multiline content, untrusted prompt-like issue text, Unicode, duplicate attachment names, oversized packages, denied attachment access, and clipboard failure.
 - Verify ZIP schema bytes equal the authoritative schema and clipboard schema content parses identically.
 

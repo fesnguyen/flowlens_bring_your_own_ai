@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://flowlens.dev/schemas/flowlens.schema.json",
-  "title": "FlowLens Analysis v1",
+  "$id": "https://flowlens.dev/schemas/flowlens.v2.schema.json",
+  "title": "FlowLens Analysis v2",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -12,7 +12,7 @@
   ],
   "properties": {
     "version": {
-      "const": 1
+      "const": 2
     },
     "issue": {
       "type": "object",
@@ -31,8 +31,6 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "repository",
-        "revision",
         "summary"
       ],
       "properties": {
@@ -157,16 +155,18 @@
     }
   },
   "$defs": {
-    "range": {
+    "source": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "file",
-        "startLine",
-        "endLine"
+        "file"
       ],
       "properties": {
         "file": {
+          "type": "string",
+          "minLength": 1
+        },
+        "symbol": {
           "type": "string",
           "minLength": 1
         },
@@ -180,84 +180,15 @@
         }
       }
     },
-    "codeLine": {
-      "type": "array",
-      "prefixItems": [
-        {
-          "type": "integer",
-          "minimum": 1
-        },
-        {
-          "type": "string"
-        }
-      ],
-      "minItems": 2,
-      "maxItems": 2
-    },
-    "codeBlock": {
-      "oneOf": [
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "lines"
-          ],
-          "properties": {
-            "lines": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "$ref": "#/$defs/codeLine"
-              }
-            }
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "omitted"
-          ],
-          "properties": {
-            "omitted": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "startLine",
-                "endLine",
-                "summary"
-              ],
-              "properties": {
-                "startLine": {
-                  "type": "integer",
-                  "minimum": 1
-                },
-                "endLine": {
-                  "type": "integer",
-                  "minimum": 1
-                },
-                "summary": {
-                  "type": "string",
-                  "minLength": 1
-                }
-              }
-            }
-          }
-        }
-      ]
-    },
-    "finding": {
+    "content": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "id",
-        "title",
-        "status",
-        "explanation",
-        "evidence"
+        "type",
+        "text"
       ],
       "properties": {
-        "id": {
+        "type": {
           "type": "string",
           "minLength": 1
         },
@@ -265,33 +196,59 @@
           "type": "string",
           "minLength": 1
         },
-        "severity": {
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ]
-        },
-        "status": {
-          "enum": [
-            "suspected",
-            "supported",
-            "confirmed"
-          ]
-        },
-        "explanation": {
+        "text": {
           "type": "string",
           "minLength": 1
         },
-        "evidence": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/range"
-          }
+        "status": {
+          "type": "string",
+          "minLength": 1
         },
-        "suggestion": {
-          "type": "string"
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      }
+    },
+    "impact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nodeId",
+        "relationship",
+        "consequence",
+        "reason"
+      ],
+      "properties": {
+        "nodeId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "relationship": {
+          "type": "string",
+          "minLength": 1
+        },
+        "consequence": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verification": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "hypothesis",
+            "supported",
+            "uncertain"
+          ]
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },
@@ -300,71 +257,42 @@
       "additionalProperties": false,
       "required": [
         "id",
-        "kind",
-        "title",
-        "description"
+        "title"
       ],
       "properties": {
         "id": {
           "type": "string",
           "minLength": 1
         },
-        "kind": {
-          "enum": [
-            "start",
-            "end",
-            "operation",
-            "decision",
-            "retry",
-            "error"
-          ]
-        },
         "title": {
           "type": "string",
           "minLength": 1
         },
-        "description": {
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "subheader": {
           "type": "string",
           "minLength": 1
         },
         "source": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "file",
-            "symbol",
-            "startLine",
-            "endLine"
-          ],
-          "properties": {
-            "file": {
-              "type": "string",
-              "minLength": 1
-            },
-            "startLine": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "endLine": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "symbol": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
+          "$ref": "#/$defs/source"
         },
-        "code": {
+        "content": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/codeBlock"
+            "$ref": "#/$defs/content"
           }
         },
-        "findings": {
+        "impacts": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/finding"
+            "$ref": "#/$defs/impact"
           }
         }
       }

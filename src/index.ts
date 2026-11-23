@@ -2,6 +2,8 @@
 import api, { route } from '@forge/api';
 import { makeResolver } from '@forge/resolver';
 import type { ResolverDefinitions } from './definitions';
+import { forgeStorage } from './forge_storage';
+import { issueId, workspaceResolver } from './workspace_resolver';
 import {
   getInspectionAttachment,
   getInspectionIssue,
@@ -64,103 +66,18 @@ const jira: JiraInspectionApi = {
     ),
 };
 
-/**
- * issueId — Extract and validate the Jira issue ID from Forge context.
- *
- * Forge supplies the extension context to backend resolvers.
- * We use that context instead of trusting an issue ID from the frontend.
- *
- * Validation:
- * - The issue ID must be a string.
- * - It must contain only numeric characters.
- *
- * Returns undefined when the issue ID is missing or invalid.
- *
- * @param extension - Forge extension context.
- */
-function issueId(extension: unknown): string | undefined {
-  // Type assertion describes the expected shape of the external context.
-  // It does not validate the data at runtime.
-  const id = (
-    extension as { issue?: { id?: unknown } } | undefined
-  )?.issue?.id;
+const workspace = workspaceResolver(forgeStorage, jira);
 
-  // Validate the actual runtime value before using it in Jira requests.
-  return typeof id === 'string' && /^\d+$/.test(id)
-    ? id
-    : undefined;
-}
-
-/**
- * handler — Forge resolver entry point.
- *
- * Exposes backend functions that the React frontend can invoke
- * through Forge Bridge's makeInvoke().
- *
- * Available operations:
- * - health: Verify that the frontend can reach the resolver.
- * - getInspectionIssue: Load issue data for inspection.
- * - getInspectionAttachment: Retrieve attachment content.
- *
- * ResolverDefinitions provides TypeScript contracts shared
- * between the frontend and backend.
- *
- * SECURITY:
- * The Jira issue identity comes from the trusted Forge extension
- * context, not from a frontend-provided issue ID.
- *
- * Jira requests use api.asUser(), so they run under the
- * current user's Jira permissions.
- */
+/** Bridge operations use Forge context for identity and Jira asUser for issue authorization. */
 export const handler = makeResolver<ResolverDefinitions>({
-  /**
-   * HEALTH CHECK
-   *
-   * Triggered by the frontend during initialization to verify
-   * that Forge Bridge can communicate with the backend.
-   */
-  health: () => ({
-    message: 'Hello from the FlowLens Forge resolver.',
-  }),
-
-  /**
-   * GET INSPECTION ISSUE
-   *
-   * Triggered by both inspection actions:
-   * - Copy Inspection Prompt
-   * - Export Inspection Package
-   *
-   * Execution:
-   * 1. Read the issue ID from Forge context.
-   * 2. Determine whether attachment metadata is requested.
-   * 3. Delegate issue retrieval to jira_inspection.ts.
-   *
-   * Attachment metadata is requested only for export.
-   */
+  listIssueFlows: ({ context }) => workspace.list(context),
+  getIssueFlow: ({ context, payload }) => workspace.get(context, payload?.id),
+  importIssueAnalysis: ({ context, payload }) => workspace.import(context, payload?.text),
+  deleteIssueFlow: ({ context, payload }) => workspace.remove(context, payload?.id),
+  getCustomInstruction: ({ context }) => workspace.getInstruction(context),
+  saveCustomInstruction: ({ context, payload }) => workspace.saveInstruction(context, payload?.text, payload?.revision),
   getInspectionIssue: ({ context, payload }) =>
-    getInspectionIssue(
-      jira,
-      issueId(context.extension),
-      payload?.includeAttachments === true,
-    ),
-
-  /**
-   * GET INSPECTION ATTACHMENT
-   *
-   * Triggered during Export Inspection Package.
-   *
-   * Execution:
-   * 1. Identify the current Jira issue from Forge context.
-   * 2. Read the requested attachment ID from the payload.
-   * 3. Delegate attachment retrieval to jira_inspection.ts.
-   *
-   * The inspection service is responsible for validating
-   * the attachment request before retrieving its content.
-   */
+    getInspectionIssue(jira, issueId(context.extension), payload?.includeAttachments === true),
   getInspectionAttachment: ({ context, payload }) =>
-    getInspectionAttachment(
-      jira,
-      issueId(context.extension),
-      payload?.attachmentId,
-    ),
+    getInspectionAttachment(jira, issueId(context.extension), payload?.attachmentId),
 });
