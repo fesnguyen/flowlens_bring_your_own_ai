@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CodePreview } from './CodeViewer';
-import type { Flow, InspectionNode, LegacyNode } from './inspection';
+import type { Flow, InspectionNode, LegacyNode } from '../../../shared/inspection';
 import { impactTargets } from './inspection/flow_collection';
 
 /**

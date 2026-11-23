@@ -1,7 +1,7 @@
 
 import { X } from 'lucide-react';
 import { CodeViewer } from './CodeViewer';
-import type { ContentBlock, Finding, Flow, InspectionNode, SourceReference } from './inspection';
+import type { ContentBlock, Finding, Flow, InspectionNode, SourceReference } from '../../../shared/inspection';
 
 /**
  * FindingDetails — Individual finding card inside the Code Inspector.

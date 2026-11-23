@@ -1,60 +1,16 @@
-# Analysis Import Pipeline — Implementation Specification
+# Analysis Import Pipeline
 
-**Status:** Browser import and additive in-panel flow management implemented. Forge-backed flow storage is planned.
-**Parents:** `../features/ANALYSIS_SCHEMA.md`, `DATA_STORAGE.md`, `JSON_SCHEMA_VALIDATION.md`
+**Status:** Implemented for v1 and v2 analyses.
+**Parents:** [Analysis Schema](../features/ANALYSIS_SCHEMA.md), [Data Storage](DATA_STORAGE.md)
 
-## Implemented path
+1. The user selects an analysis with **Import JSON**. The browser checks the file and serialized request size and sends the JSON text to the resolver.
+2. The resolver reads the stable issue ID and user identity from Forge context, checks Jira access as the current user, and obtains the current Jira issue key.
+3. Shared validation checks the schema version, shape, current issue key, and graph references. The adapter translates v1 and v2 into the same viewer contract.
+4. The storage service reads the issue directory, assigns stable UUIDs and unique display names, and commits the new directory and graphs in one transaction.
+5. The panel updates the flow list and opens the first new flow after confirmation. Later panel openings load the saved directory automatically.
 
-The file picker accepts analysis JSON up to 5 MiB. The browser validates the version, schema, issue key when available, and references. It adapts v1 or v2 to the shared viewer types and appends all validated flows in one state update. A local list key distinguishes repeated imports while the analysis keeps its original IDs, per-flow references and provenance. Name collisions use suffixes starting at `(0)`. Selecting or removing a flow affects it independently. Unsuccessful imports leave the current flows intact.
+Each successful import adds independent flows. If a name already exists, the resolver adds the first available suffix starting at `(0)`. IDs within an imported file are retained for graph references. A suggestion that references another flow in the same file also receives the corresponding saved UUID.
 
-The flow collection lives in the open panel. Reloading clears it. The following sections describe the future Forge-backed path.
+Validation errors leave saved flows intact and identify the affected field or relationship. If a write result cannot be confirmed, reload the saved list before retrying. The standalone preview also accepts analysis JSON for graph testing and discards those edits when reloaded.
 
-## Planned scope and neighboring operations
-
-This pipeline handles **Import JSON**: an external AI-produced `flowlens-analysis.json` becomes saved flows. It does **not** build the Copy Inspection Prompt or Export Inspection Package; those actions use `INSPECTION_TEMPLATE.md`. A separate future **Export Flows as JSON** operation reads saved flows, reconstructs a schema-compatible analysis document (including issue and analysis provenance), maps persistent IDs to export IDs, validates it, and downloads JSON. It does not produce the inspection ZIP or include attachments.
-
-## Sequence
-
-```text
-User selects flowlens-analysis.json
-  → client size/type check
-  → parse JSON
-  → resolver verifies Jira context and access
-  → structural and semantic validation
-  → read existing IssueFlows / names
-  → allocate new Flow IDs and an Analysis ID
-  → resolve duplicate names and remap suggested-flow references
-  → persist new Analysis + Flow records and update IssueFlows safely
-  → return imported IDs, names, renames
-  → refresh sidebar and select a newly imported Flow
-```
-
-The client may prevalidate for immediate feedback, but the resolver must validate again. Never trust a client-side validation result.
-
-## Additive import contract
-
-**Every successful import adds independent flows to the Jira issue.** It does not merge imported nodes/edges into an existing diagram, and does not overwrite or replace a same-named flow. A future replacement feature would require a separate explicit user action; it is out of MVP scope.
-
-For example, if `Checkout Processing` exists, importing another `Checkout Processing` creates `Checkout Processing (0)`. Additional collisions receive `(1)`, `(2)`, etc. The suffix allocator must choose the next free name even when the imported file itself repeats a name.
-
-One imported file creates one `Analysis` record (investigation provenance) and one `Flow` record per imported flow; each `Flow.analysisId` points to its `Analysis`. `IssueFlows` tracks the resulting ordered flow IDs.
-
-## Rules
-
-- Persisted flow IDs differ from AI-imported IDs and remain stable.
-- Remap `basedOnFlowId` when its original target is in the same batch.
-- Reject incompatible versions and wrong Jira issue identity.
-- Existing flows remain untouched on validation/storage failure.
-- Never silently merge two flows, even when names match.
-
-## Atomicity and concurrency
-
-Name allocation and index updates must be safe under concurrent imports. Select a Forge-supported transaction/conditional-write or recovery mechanism after verifying platform capabilities. Do not assume a multi-key transaction exists. If true all-or-nothing persistence cannot be guaranteed, design an explicit staging/commit protocol and test crash recovery before release.
-
-## Error UI
-
-Show issue-level errors and precise schema paths. Example: `flows[0].nodes[2].code[1].lines[0] must be [number, string]`. Include a Copy Validation Report action so the user can ask their AI to regenerate the file. Avoid silently fixing broken relationships or missing evidence.
-
-## Acceptance tests
-
-Single/multiple flows, repeated file, same-name import, same-batch duplicates, suggestion remapping, invalid references, wrong issue, oversized payload, concurrent imports, storage failure, and refresh/reload. Assert existing flows and their nodes/edges are unchanged after every import.
+See [Data Storage](DATA_STORAGE.md) for limits and concurrency. Saved-flow export is a separate future operation. **Export Inspection Package** prepares inputs for an external AI.

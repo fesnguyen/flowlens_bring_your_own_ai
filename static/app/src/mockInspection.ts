@@ -1,4 +1,4 @@
-import type { CodeBlock, LegacyInspection, LegacyNode } from './inspection';
+import type { CodeBlock, LegacyInspection, LegacyNode } from '../../../shared/inspection';
 
 const paymentFile = 'payment_service.py';
 

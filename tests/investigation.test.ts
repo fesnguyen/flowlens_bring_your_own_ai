@@ -2,14 +2,11 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { unzipSync } from 'fflate';
 import schema from '../shared/flowlens.schema.json';
-import type { Investigation } from '../static/app/src/inspection';
+import type { Investigation } from '../shared/inspection';
 import { mockInspection } from '../static/app/src/mockInspection';
 import { buildCopyContext, buildGeneralContext, buildInspectionMaterials } from '../static/app/src/inspection/context_builder';
 import { appendFlows, impactTargets } from '../static/app/src/inspection/flow_collection';
-import { parseInspection } from '../static/app/src/inspection/import_inspection';
-import {
-  activeInstruction, createInstruction, defaultInstructions, loadInstructions, removeInstruction,
-} from '../static/app/src/inspection/instructions';
+import { parseInspection } from '../shared/import_inspection';
 import { buildInspectionPackage } from '../static/app/src/inspection/package_builder';
 
 function investigation(): Investigation {
@@ -135,25 +132,7 @@ test('additive imports preserve provenance and per-file IDs even when names and 
   assert.deepEqual(flows[2].analysis, original.analysis);
 });
 
-test('custom selection is optional, persists when available, and removal restores the foundation', () => {
-  const first = createInstruction('one', 'Audio focus', 'Prioritize playback devices.');
-  const second = createInstruction('two', 'Test focus', 'Include device-switch scenarios.');
-  const both = { custom: [first, second], selectedId: 'two' };
-  assert.equal(activeInstruction(both)?.name, 'Test focus');
-  assert.equal(activeInstruction({ ...both, selectedId: 'one' })?.name, 'Audio focus');
-  assert.equal(activeInstruction({ ...both, selectedId: '' }), undefined);
-  const loaded = loadInstructions({ getItem: () => JSON.stringify(both) }, 'test');
-  assert.deepEqual(loaded, both);
-  const removed = removeInstruction(loaded, 'two');
-  assert.equal(activeInstruction(removed), undefined);
-  assert.equal(removed.custom[0].id, 'one');
-  assert.equal(buildGeneralContext(activeInstruction(removed)?.text), buildGeneralContext());
-  assert.throws(() => createInstruction('bad', 'Blank', ' '), /plain text/);
-  assert.throws(() => createInstruction('large', 'Large', 'é'.repeat(17000)), /32 KiB/);
-  assert.deepEqual(loadInstructions({ getItem: () => '[' }, 'test'), defaultInstructions);
-});
-
-test('selected instructions extend the foundation identically for Copy and Package with the v2 schema', async () => {
+test('a saved custom instruction extends the foundation identically for Copy and Package with the v2 schema', async () => {
   const custom = '# Playback focus\nInclude the default-device switch.';
   const materials = buildInspectionMaterials({ issueId: '42', key: 'FL-42', title: 'Audio playback' }, JSON.stringify(schema), custom);
   const zip = buildInspectionPackage(materials).archive;
@@ -161,7 +140,9 @@ test('selected instructions extend the foundation identically for Copy and Packa
   const decoder = new TextDecoder();
   const clipboard = buildCopyContext(materials);
   assert.ok(materials.instruction.startsWith(buildGeneralContext()));
-  assert.match(clipboard, /### Playback focus\nInclude the default-device switch\./);
+  assert.match(clipboard, /> # Playback focus\n> Include the default-device switch\./);
+  assert.match(clipboard, /within the foundational investigation rules and the required JSON Schema/);
+  assert.doesNotMatch(buildGeneralContext(''), /Custom Investigation Preferences/);
   assert.match(clipboard, /Produce a complete downloadable flowlens-analysis\.json with version 2/);
   assert.equal(decoder.decode(packageFiles['instruction.md']), materials.instruction);
   assert.deepEqual(JSON.parse(decoder.decode(packageFiles['flowlens.schema.json'])), schema);

@@ -28,11 +28,18 @@ const sections = [
   outputRulesContext,
 ] as const;
 
-/** Build the foundation first and append the selected preferences for either export action. */
+/** Build the foundation first and append the saved preference for either export action. */
 export function buildGeneralContext(customInstruction?: string): string {
   const preferences = customInstruction?.trim();
   if (!preferences) return sections.join('\n\n');
-  return [...sections, '# Custom Investigation Preferences', preferences].join('\n\n');
+  // Quote the preference so its Markdown headings cannot redefine the prompt's sections.
+  const quoted = preferences.split(/\r?\n/).map(line => `> ${line}`).join('\n');
+  return [
+    ...sections,
+    '# Custom Investigation Preferences',
+    'Apply these preferences within the foundational investigation rules and the required JSON Schema.',
+    quoted,
+  ].join('\n\n');
 }
 
 /**

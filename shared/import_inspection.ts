@@ -1,6 +1,6 @@
-import currentSchema from '../../../../shared/flowlens.schema.json';
-import legacySchema from '../../../../shared/flowlens.v1.schema.json';
-import { toInspection, type Inspection, type Investigation, type LegacyInspection, type SourceReference } from '../inspection';
+import currentSchema from './flowlens.schema.json';
+import legacySchema from './flowlens.v1.schema.json';
+import { toInspection, type Inspection, type Investigation, type LegacyInspection, type SourceReference } from './inspection';
 
 type Schema = {
   $ref?: string;

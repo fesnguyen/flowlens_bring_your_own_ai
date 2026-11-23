@@ -163,7 +163,12 @@ On the installed Jira development site:
 3. Verify the React interface loads.
 4. Verify Forge Bridge obtains Jira context.
 5. Verify the current issue key is available.
-6. Verify the resolver health check succeeds.
+6. Verify the panel loads saved flows for the issue.
+7. Import a v1 or v2 analysis, reload Jira, and verify the saved diagram and its impact highlights.
+8. Change and save the custom instruction, open another issue as the same user, and verify the saved text. Then verify a second account starts with its own preference.
+9. Remove one saved flow and reload to verify the other flows remain available.
+
+The persistence feature adds the `storage:app` scope and the Custom Entity Store definition. After deploying to development for the first time with these changes, upgrade the existing development installation with `forge install --upgrade --environment development`.
 7. Inspect logs for unexpected errors.
 
 A successful local build does not replace testing inside Jira.

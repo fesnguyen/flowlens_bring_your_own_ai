@@ -1,12 +1,12 @@
 # Inspection Template — Implementation Specification
 
-**Status:** Copy, Package and custom instruction selection implemented
+**Status:** Copy, Package and private custom instruction implemented
 **Parent:** `../features/INSPECTION_PROMPT.md`
 
 ## 1. Implementation overview
 
 ```text
-                     foundation + selected preferences
+                     foundation + saved preference
                                   │
               ┌───────────────────┼──────────────────┐
               │                   │                  │
@@ -24,7 +24,7 @@
                  attachments/
 ```
 
-Copy and Package share one assembled instruction. Copy nests its headings for the clipboard document. Package preserves the assembled Markdown as a separate file. Issue fields and schema are separate inputs.
+Copy and Package share one assembled instruction with the private preference loaded from Forge. The builder quotes custom text under the immutable foundation. Copy nests its headings for the clipboard document. Package preserves the assembled Markdown as a separate file. Issue fields and schema are separate inputs.
 
 ## 2. Source assets and ownership
 

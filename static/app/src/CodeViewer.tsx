@@ -1,4 +1,4 @@
-import type { CodeBlock, CodeLine } from './inspection';
+import type { CodeBlock, CodeLine } from '../../../shared/inspection';
 
 function SourceLine({ line }: { line: CodeLine }) {
   const [number, content] = line;

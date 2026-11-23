@@ -1,4 +1,4 @@
-import type { AnalysisProvenance, Flow, Inspection } from '../inspection';
+import type { AnalysisProvenance, Flow, Inspection } from '../../../../shared/inspection';
 
 export type ListedFlow = {
   key: number;

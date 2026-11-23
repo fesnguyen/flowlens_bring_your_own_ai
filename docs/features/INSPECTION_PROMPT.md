@@ -9,7 +9,7 @@
 
 FlowLens helps a developer hand a Jira issue to **their own external AI** for source-code investigation. FlowLens prepares the materials; the external AI inspects the repository and produces `flowlens-analysis.json`. FlowLens does not run AI or modify source code.
 
-A reusable, issue-independent foundation is shared by both actions. The selected custom instruction, when present, extends that foundation. Jira issue content and the JSON Schema are separate inputs assembled for delivery.
+A reusable, issue-independent foundation is shared by both actions. The saved custom instruction, when present, extends that foundation. Jira issue content and the JSON Schema are separate inputs assembled for delivery.
 
 ## 2. What the user receives
 
@@ -32,7 +32,7 @@ A reusable, issue-independent foundation is shared by both actions. The selected
 
 | Action | Behavior | Attachments |
 |---|---|---|
-| **Copy Inspection Prompt** | Copy one readable Markdown message assembled from the selected instruction material, current Jira issue content, and the complete JSON Schema | Never included |
+| **Copy Inspection Prompt** | Copy one readable Markdown message assembled from the built-in and saved instruction material, current Jira issue content, and the complete JSON Schema | Never included |
 | **Export Inspection Package** | Download a ZIP with the **same instruction**, issue content, schema, and accessible Jira attachments as separate files | Included when permitted; exclusions reported |
 | **Export Flows as JSON** | Download existing saved flow analyses as JSON for reuse or backup; **not** an inspection-request package | Not included |
 
@@ -42,9 +42,9 @@ A reusable, issue-independent foundation is shared by both actions. The selected
 
 ### A. General inspection instruction
 
-Open **Investigation instructions** to add a named instruction, import a UTF-8 Markdown or plain-text instruction (up to 32 KiB), or remove a selected custom instruction. The built-in default is always available. Removing the active custom instruction returns to the default. Copy and Package use one selection for the current request.
+Open **Investigation instructions** to edit one private preference (up to 32 KiB). Save applies it across Jira issues on this site. Cancel discards the draft. Reset to Default clears the custom text while keeping the built-in foundation. Copy and Package use the same saved instruction.
 
-The foundation defines minimum investigation rules and keeps the v2 analysis contract authoritative. Custom instructions can guide investigation depth, content, and presentation. The panel validates the AI's response when the user imports it.
+The foundation defines minimum investigation rules and keeps the v2 analysis contract authoritative. Custom instructions can guide investigation depth, content, and presentation. The resolver validates the AI's response when the user imports it.
 
 The current versioned, issue-independent instruction tells the external AI **how to investigate**:
 
@@ -75,7 +75,7 @@ Issue-specific content includes the available issue key, title/summary, type, st
 When the user clicks Copy:
 
 1. Read authorized context for the current Jira issue.
-2. Assemble the built-in foundation and selected custom preferences, readable issue content, and the full JSON Schema into **one** Markdown clipboard payload, with clear section boundaries.
+2. Assemble the built-in foundation and the saved custom preference, readable issue content, and the full JSON Schema into **one** Markdown clipboard payload, with clear section boundaries.
 3. Copy it and show success or a useful fallback/error.
 
 The copied content contains no attachment bytes or fabricated attachment descriptions. The user can add extra context directly in their external AI conversation.
@@ -94,7 +94,7 @@ Illustrative package:
 
 ```text
 flowlens-inspection-SHOP-142.zip
-├── instruction.md          # Built-in instruction and selected preferences
+├── instruction.md          # Built-in instruction and the saved preference
 ├── issue.md                # Current Jira issue content
 ├── flowlens.schema.json    # Authoritative output contract
 ├── manifest.json           # Included/excluded attachments and reasons
@@ -109,7 +109,7 @@ The package is a **request for investigation**, not a stored analysis export.
 
 The AI returns `flowlens-analysis.json` with `version`, `issue`, `analysis`, and flat `flows[]`. The schema governs exact fields. Relevant original-flow conclusions use `inconclusive`, `potential_issues`, `likely_root_cause`, or `confirmed_mismatch`; a confirmed code mismatch alone does not prove production causality.
 
-FlowLens validates the file and adds its flows to the open panel. **Export Flows as JSON**, when implemented, serializes selected saved flows into a schema-compatible JSON analysis file (including required issue and analysis metadata), so the result can be imported again. The implementation must define provenance and export scope; it must not dump internal KVS keys or assume persistent storage IDs are valid import IDs.
+FlowLens validates the file and saves its flows for the current Jira issue. **Export Flows as JSON**, when implemented, serializes selected saved flows into a schema-compatible JSON analysis file (including required issue and analysis metadata), so the result can be imported again. The implementation must define provenance and export scope; it must not dump internal KVS keys or assume persistent storage IDs are valid import IDs.
 
 ## 7. Boundaries and ownership
 

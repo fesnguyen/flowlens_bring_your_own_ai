@@ -184,6 +184,9 @@ importers:
       '@forge/bridge':
         specifier: 7.3.0
         version: 7.3.0(@types/react@18.3.31)(react@18.3.1)(typescript@5.9.3)
+      '@forge/kvs':
+        specifier: 2.1.2
+        version: 2.1.2(typescript@5.9.3)
       '@forge/resolver':
         specifier: 2.0.2
         version: 2.0.2(typescript@5.9.3)
@@ -528,6 +531,14 @@ packages:
 
   '@forge/i18n@1.0.1':
     resolution: {integrity: sha512-iZqAOvaq0MwMPplC0U0HLpQ/cOYUumxH3D6OO3PoSBDm6P1tD2Bdb8lND0CmL1+SZhsp7GS5DDd265/sVyMMDA==}
+    peerDependencies:
+      typescript: '>=5.0.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@forge/kvs@2.1.2':
+    resolution: {integrity: sha512-/I9ZUj+v6LR3VAqlQqmfIPgjG70cMLt8Pq5GBwR4QkaSI64pa+lTUv/jCWtlqh3OPWXjhIFZsVrAJmVwSeykvg==}
     peerDependencies:
       typescript: '>=5.0.0'
     peerDependenciesMeta:
@@ -1594,6 +1605,12 @@ snapshots:
   '@forge/i18n@1.0.1(typescript@5.9.3)':
     dependencies:
       lodash: 4.18.1
+    optionalDependencies:
+      typescript: 5.9.3
+
+  '@forge/kvs@2.1.2(typescript@5.9.3)':
+    dependencies:
+      '@forge/api': 8.5.0(typescript@5.9.3)
     optionalDependencies:
       typescript: 5.9.3
 

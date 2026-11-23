@@ -1,80 +1,111 @@
-import { useState } from 'react';
-import {
-  activeInstruction, createInstruction, maxInstructionBytes, removeInstruction, type InstructionPreferences,
-} from './inspection/instructions';
+import { Settings2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import type { InstructionPreference } from '../../../shared/workspace';
 
-/** Select the foundation or manage optional preferences shared by Copy and Package. */
-export function InstructionSettings({ preferences, onChange }: {
-  preferences: InstructionPreferences;
-  onChange: (update: (current: InstructionPreferences) => InstructionPreferences) => void;
+/** Edit one private preference. The draft survives a failed save or a reload of the saved value. */
+export function InstructionSettings({ preference, loading, loadError, onSave, onReload }: {
+  preference?: InstructionPreference;
+  loading: boolean;
+  loadError?: string;
+  onSave: (text: string) => Promise<void>;
+  onReload: () => Promise<void>;
 }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<string>();
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
+  const [status, setStatus] = useState('');
+  const toggle = useRef<HTMLButtonElement>(null);
+  const editor = useRef<HTMLTextAreaElement>(null);
+  const lock = useRef(false);
 
-  function save(name: string, text: string) {
-    const id = crypto.randomUUID();
-    // Validate synchronously for feedback, then apply against the latest preferences.
-    const instruction = createInstruction(id, name, text);
-    onChange(current => ({ custom: [...current.custom, instruction], selectedId: id }));
+  useEffect(() => {
+    if (open && preference && !loading) editor.current?.focus();
+  }, [open, Boolean(preference), loading]);
+
+  function close() {
+    if (lock.current) return;
+    setOpen(false);
+    setDraft(undefined);
     setError(undefined);
+    toggle.current?.focus();
   }
 
-  return (
-    <details className="instruction-settings">
-      <summary>Investigation instructions</summary>
-      <div className="instruction-controls">
-        <label htmlFor="instruction-choice">Use for Copy and Export</label>
-        <select id="instruction-choice" value={preferences.selectedId}
-          onChange={event => {
-            const selectedId = event.currentTarget.value;
-            onChange(current => ({ ...current, selectedId }));
-          }}>
-          <option value="">Built-in default</option>
-          {preferences.custom.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}
-        </select>
-        {activeInstruction(preferences) && (
-          <button className="header-action" type="button"
-            onClick={() => onChange(current => removeInstruction(current, preferences.selectedId))}>
-            Remove selected instruction
-          </button>
-        )}
-      </div>
+  async function save(text: string) {
+    if (lock.current || loading || !preference) return;
+    lock.current = true;
+    setSaving(true);
+    setError(undefined);
+    setStatus('');
+    try {
+      await onSave(text);
+      setDraft(undefined);
+      setStatus(text.trim() ? 'Custom instruction saved.' : 'Built-in instruction restored.');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not save your instruction.');
+    } finally {
+      lock.current = false;
+      setSaving(false);
+    }
+  }
 
-      {/* Pasted and imported preferences both extend the built-in instruction. */}
-      <form className="instruction-form" onSubmit={event => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        const data = new FormData(form);
-        try {
-          save(String(data.get('name')), String(data.get('instruction')));
-          form.reset();
-        } catch (error) {
-          setError(error instanceof Error ? error.message : 'Could not add the instruction.');
-        }
-      }}>
-        <label htmlFor="instruction-name">Name</label>
-        <input id="instruction-name" name="name" type="text" maxLength={80} required />
-        <label htmlFor="instruction-text">Custom instruction</label>
-        <textarea id="instruction-text" name="instruction" rows={4} required />
-        <button className="header-action" type="submit">Add instruction</button>
-      </form>
-      <div className="instruction-controls">
-        <label htmlFor="instruction-file">Import instruction (.md or .txt)</label>
-        <input id="instruction-file" type="file" accept=".md,.txt,text/plain,text/markdown"
-          onChange={async event => {
-            const input = event.currentTarget;
-            const file = input.files?.[0];
-            if (!file) return;
-            input.value = '';
-            try {
-              if (file.size > maxInstructionBytes) throw new Error('Instruction file exceeds the 32 KiB limit.');
-              const text = new TextDecoder('utf-8', { fatal: true }).decode(await file.arrayBuffer());
-              save(file.name.replace(/\.(?:md|txt)$/i, '').slice(0, 80), text);
-            } catch (error) {
-              setError(error instanceof Error ? error.message : 'Could not read the instruction file.');
-            }
-          }} />
-      </div>
-      {error && <p role="alert" className="inspection-error">{error}</p>}
-    </details>
+  const text = draft ?? preference?.text ?? '';
+  return (
+    <div className="instruction-settings" onKeyDown={event => {
+      if (event.key === 'Escape' && open) {
+        event.stopPropagation();
+        close();
+      }
+    }}>
+      <button type="button" ref={toggle} className="button icon-button settings-toggle"
+        aria-expanded={open} aria-controls="instruction-panel" aria-label="Investigation instructions"
+        title="Investigation instructions" onClick={() => {
+          if (open) close();
+          else {
+            setStatus('');
+            setOpen(true);
+          }
+        }}>
+        <Settings2 size={16} aria-hidden="true" />
+      </button>
+      {open && (
+        <section id="instruction-panel" className="instruction-panel" aria-labelledby="instruction-title">
+          <div className="panel-heading">
+            <h2 id="instruction-title">Investigation instructions</h2>
+            <button type="button" className="button icon-button button-quiet" disabled={saving}
+              aria-label="Close investigation instructions" onClick={close}><X size={16} aria-hidden="true" /></button>
+          </div>
+          <p>Customize what your AI focuses on. FlowLens always includes the built-in instructions and JSON contract.</p>
+          {loading && <p role="status">Loading your saved instruction…</p>}
+          {loadError && <p className="error-text" role="alert">{loadError}</p>}
+          {error && <p className="error-text" role="alert">{error}</p>}
+          {status && <p className="instruction-status" role="status">{status}</p>}
+          {(loadError || error) && (
+            <button type="button" className="button button-quiet" disabled={loading || saving} onClick={() => {
+              setError(undefined);
+              void onReload();
+            }}>Reload saved instruction</button>
+          )}
+          <form onSubmit={event => {
+            event.preventDefault();
+            void save(text);
+          }}>
+            <label htmlFor="instruction-text">Custom instruction</label>
+            <textarea id="instruction-text" ref={editor} value={text} rows={5} disabled={loading || saving || !preference}
+              onChange={event => { setDraft(event.currentTarget.value); setStatus(''); }}
+              placeholder="For example, focus on retries and how to verify the failure." />
+            <div className="instruction-actions">
+              <button type="button" className="button button-quiet reset-instruction" disabled={saving || loading || !preference?.text}
+                onClick={() => void save('')}>Reset to Default</button>
+              <button type="button" className="button" disabled={saving} onClick={close}>Cancel</button>
+              <button type="submit" className="button button-primary"
+                disabled={saving || loading || !preference || text.trim() === preference.text}>
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
+    </div>
   );
 }

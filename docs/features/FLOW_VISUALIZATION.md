@@ -3,7 +3,7 @@
 **Authority:** Level 3 — Feature Behavior  
 **Parent:** `docs/PROJECT_OVERVIEW.md`  
 **Related:** `ANALYSIS_SCHEMA.md`  
-**Status:** Graph, node details, relative impact and in-panel flow management implemented.
+**Status:** Graph, node details, relative impact and Forge-backed flow management implemented.
 
 ## 1. Purpose
 
@@ -34,7 +34,7 @@ Users must be able to:
 
 - Select and view a flow.
 - Import additional flows.
-- Remove an individual imported flow from the current panel.
+- Remove an individual imported flow from the Jira issue.
 - Distinguish original flows from suggested flows.
 - Review the investigation conclusion when available.
 

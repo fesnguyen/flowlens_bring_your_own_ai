@@ -2,7 +2,7 @@
 
 FlowLens helps developers investigate issues, understand relevant system behavior, and assess the potential impact of changes using their own AI. Jira Cloud is the initial integration, built with Atlassian Forge for Codegeist 2026.
 
-The product direction is documented in [Project Overview](docs/PROJECT_OVERVIEW.md), [Flow Visualization](docs/features/FLOW_VISUALIZATION.md), and [Analysis Schema](docs/features/ANALYSIS_SCHEMA.md). FlowLens imports both v1 and v2 analyses and generates v2 requests. New nodes support ordered content, optional source references, and relative-impact highlighting. The panel can add and remove flows during the current session. Forge-backed flow storage and direct source navigation remain planned.
+The product direction is documented in [Project Overview](docs/PROJECT_OVERVIEW.md), [Flow Visualization](docs/features/FLOW_VISUALIZATION.md), and [Analysis Schema](docs/features/ANALYSIS_SCHEMA.md). FlowLens imports both v1 and v2 analyses and generates v2 requests. New nodes support ordered content, optional source references, and relative-impact highlighting. Imported flows are saved per Jira issue. The optional custom instruction is saved per user on the Jira site. Direct source navigation and saved-flow JSON export are deferred.
 
 ## Environment
 
@@ -129,3 +129,5 @@ Manifest changes require redeployment and sometimes an installation upgrade.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+The investigation workspace uses Forge Custom Entity Store. See [Data Storage](docs/implementation/DATA_STORAGE.md) for ownership and size limits. Existing development installations need an upgrade for the new `storage:app` scope.
